@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useParkingContext } from '@/contexts/ParkingContext';
 
 interface BookingListProps {
   bookings: Booking[];
@@ -19,6 +20,8 @@ interface BookingListProps {
 }
 
 export function BookingList({ bookings, onCancel, isAdmin = false }: BookingListProps) {
+  const { bookSlot } = useParkingContext();
+  
   const formatDate = (date: Date | string) => {
     return format(new Date(date), 'PPP');
   };
@@ -41,14 +44,30 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
   };
   
   const generateQRData = (booking: Booking) => {
+    // Include booking details and slot information for quick booking
     return JSON.stringify({
-      id: booking.id,
-      slot: booking.slotName,
-      type: booking.slotType,
-      date: format(new Date(booking.startTime), 'PPP'),
-      time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`,
-      status: booking.status
+      action: 'book',
+      slotId: booking.slotId,
+      slotName: booking.slotName,
+      slotType: booking.slotType,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
     });
+  };
+
+  const handleBookFromQR = async (qrData: string) => {
+    try {
+      const bookingData = JSON.parse(qrData);
+      if (bookingData.action === 'book') {
+        await bookSlot(
+          bookingData.slotId,
+          new Date(bookingData.startTime),
+          new Date(bookingData.endTime)
+        );
+      }
+    } catch (error) {
+      console.error('Error booking from QR:', error);
+    }
   };
   
   // Sort bookings by date (newest first)
@@ -101,17 +120,23 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Booking QR Code</DialogTitle>
+                    <DialogTitle>Quick Booking QR Code</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col items-center justify-center p-4">
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generateQRData(booking))}`}
-                      alt="Booking QR Code"
+                      alt="Quick Booking QR Code"
                       className="w-48 h-48"
                     />
                     <p className="text-sm text-gray-500 mt-4 text-center">
-                      Scan this QR code to view booking details
+                      Scan this QR code to quickly book this slot
                     </p>
+                    <Button 
+                      className="mt-4"
+                      onClick={() => handleBookFromQR(generateQRData(booking))}
+                    >
+                      Book Now
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -129,12 +154,6 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
           </div>
         </div>
       ))}
-      
-      {sortedBookings.length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-lg text-gray-500">No bookings found.</p>
-        </div>
-      )}
     </div>
   );
 }
