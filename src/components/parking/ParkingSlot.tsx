@@ -2,7 +2,7 @@
 import React from 'react';
 import { ParkingSlot as ParkingSlotType } from '@/types';
 import { cn } from '@/lib/utils';
-import { Car, Electric } from 'lucide-react';
+import { Car, Zap } from 'lucide-react';
 
 interface ParkingSlotProps {
   slot: ParkingSlotType;
@@ -35,7 +35,7 @@ export function ParkingSlot({ slot, onClick, selected, disabled }: ParkingSlotPr
           {slot.type === 'normal' ? (
             <Car className="h-5 w-5" />
           ) : (
-            <Electric className="h-5 w-5" />
+            <Zap className="h-5 w-5" />
           )}
           <span className="text-sm font-medium">
             {isAvailable ? 'Available' : 'Occupied'}

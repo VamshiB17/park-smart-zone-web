@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
-import { Car, CircleParking, Clock, Electric, User } from 'lucide-react';
+import { Car, CircleParking, Clock, Zap, User } from 'lucide-react';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -83,7 +83,7 @@ export default function Index() {
             
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Electric className="text-primary h-6 w-6" />
+                <Zap className="text-primary h-6 w-6" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Electric Vehicle Support</h3>
               <p className="text-gray-600">

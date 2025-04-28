@@ -3,7 +3,7 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Car, Electric } from 'lucide-react';
+import { Car, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface BookingListProps {
@@ -61,7 +61,7 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                 {booking.slotType === 'normal' ? (
                   <Car className="h-4 w-4 text-gray-600" />
                 ) : (
-                  <Electric className="h-4 w-4 text-parking-electric" />
+                  <Zap className="h-4 w-4 text-parking-electric" />
                 )}
                 {getStatusBadge(booking.status)}
               </div>

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Car, Electric, User, Clock } from 'lucide-react';
+import { Car, Zap, User, Clock } from 'lucide-react';
 import { BookingList } from '@/components/booking/BookingList';
 
 export default function AdminDashboard() {

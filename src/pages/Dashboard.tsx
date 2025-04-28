@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookingList } from '@/components/booking/BookingList';
 import { SlotGrid } from '@/components/parking/SlotGrid';
-import { Car, Electric } from 'lucide-react';
+import { Car, Zap } from 'lucide-react';
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
@@ -71,7 +71,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Electric className="h-4 w-4" />
+                <Zap className="h-4 w-4" />
                 Electric Charging Slots
               </CardTitle>
               <CardDescription>Slots with EV charging</CardDescription>
