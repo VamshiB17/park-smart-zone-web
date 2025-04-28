@@ -1,10 +1,16 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Car, Zap } from 'lucide-react';
+import { Car, Zap, QrCode } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface BookingListProps {
   bookings: Booking[];
@@ -32,6 +38,17 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
       default:
         return null;
     }
+  };
+  
+  const generateQRData = (booking: Booking) => {
+    return JSON.stringify({
+      id: booking.id,
+      slot: booking.slotName,
+      type: booking.slotType,
+      date: format(new Date(booking.startTime), 'PPP'),
+      time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`,
+      status: booking.status
+    });
   };
   
   // Sort bookings by date (newest first)
@@ -75,7 +92,30 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
               )}
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <QrCode className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Booking QR Code</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generateQRData(booking))}`}
+                      alt="Booking QR Code"
+                      className="w-48 h-48"
+                    />
+                    <p className="text-sm text-gray-500 mt-4 text-center">
+                      Scan this QR code to view booking details
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              
               {booking.status === 'active' && onCancel && (
                 <Button 
                   variant="outline" 
@@ -89,6 +129,12 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
           </div>
         </div>
       ))}
+      
+      {sortedBookings.length === 0 && (
+        <div className="text-center py-10">
+          <p className="text-lg text-gray-500">No bookings found.</p>
+        </div>
+      )}
     </div>
   );
 }
