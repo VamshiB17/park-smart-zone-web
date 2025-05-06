@@ -15,7 +15,7 @@ export default function Dashboard() {
   const { slots, userBookings, cancelBooking, refreshData } = useParkingContext();
   const navigate = useNavigate();
   
-  // Setup periodic refresh for real-time updates
+  // Setup periodic refresh for real-time updates with shorter interval
   useEffect(() => {
     // Initial refresh
     refreshData();
@@ -23,7 +23,7 @@ export default function Dashboard() {
     // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
       refreshData();
-    }, 5000); // Refresh every 5 seconds
+    }, 3000); // Refresh every 3 seconds for more responsive updates
     
     return () => clearInterval(intervalId);
   }, [refreshData]);

@@ -22,7 +22,7 @@ export default function AdminDashboard() {
     // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
       refreshData();
-    }, 5000); // Refresh every 5 seconds
+    }, 3000); // Refresh every 3 seconds for more responsive updates
     
     return () => clearInterval(intervalId);
   }, [refreshData]);

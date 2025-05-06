@@ -74,7 +74,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       id: `slot-${Date.now()}`,
       name,
       type,
-      status: 'available',
+      status: 'available' as SlotStatus, // Explicitly type as SlotStatus
       floor,
     };
     
@@ -167,7 +167,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     // Update slot status to occupied if the booking is for the current time
     const now = new Date();
     if (startTime <= now && endTime >= now) {
-      const updatedSlot = { ...slot, status: 'occupied' };
+      const updatedSlot = { ...slot, status: 'occupied' as SlotStatus }; // Explicitly type as SlotStatus
       sharedDatabase.slots = sharedDatabase.slots.map(s => 
         s.id === slotId ? updatedSlot : s
       );
@@ -200,7 +200,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       const slotToUpdate = sharedDatabase.slots.find(s => s.id === booking.slotId);
       if (slotToUpdate) {
         sharedDatabase.slots = sharedDatabase.slots.map(s => 
-          s.id === booking.slotId ? { ...s, status: 'available' } : s
+          s.id === booking.slotId ? { ...s, status: 'available' as SlotStatus } : s // Explicitly type as SlotStatus
         );
       }
     }

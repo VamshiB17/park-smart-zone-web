@@ -15,11 +15,13 @@ export function ParkingSlot({ slot, onClick, selected, disabled }: ParkingSlotPr
   const isAvailable = slot.status === 'available' && !disabled;
   
   const slotClasses = cn(
-    'parking-slot',
-    isAvailable ? 'parking-slot-available' : 'parking-slot-occupied',
-    slot.type === 'electric' && 'parking-slot-electric',
-    selected && 'ring-2 ring-parking-highlight',
-    onClick && isAvailable && 'cursor-pointer'
+    'parking-slot relative rounded-lg border p-4 transition-all',
+    isAvailable 
+      ? 'bg-[#F2FCE2] border-green-300 hover:border-green-500 text-green-800' // Green for available slots
+      : 'bg-red-50 border-red-300 text-red-800', // Red for booked/occupied slots
+    slot.type === 'electric' && 'border-l-4 border-l-blue-500',
+    selected && 'ring-2 ring-blue-500 ring-offset-2',
+    onClick && isAvailable && 'cursor-pointer hover:shadow-md'
   );
   
   return (

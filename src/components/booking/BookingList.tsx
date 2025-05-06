@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
@@ -12,6 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useParkingContext } from '@/contexts/ParkingContext';
+import { toast } from 'sonner';
 
 interface BookingListProps {
   bookings: Booking[];
@@ -27,7 +29,7 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
     // Refresh data every 10 seconds to keep bookings updated
     const intervalId = setInterval(() => {
       refreshData();
-    }, 10000);
+    }, 5000);
     
     return () => clearInterval(intervalId);
   }, [refreshData]);
@@ -43,7 +45,7 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-parking-available">Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'completed':
         return <Badge variant="outline" className="text-gray-500 border-gray-300">Completed</Badge>;
       case 'cancelled':
@@ -74,9 +76,11 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
           new Date(bookingData.startTime),
           new Date(bookingData.endTime)
         );
+        toast.success("Successfully booked slot from QR code");
       }
     } catch (error) {
       console.error('Error booking from QR:', error);
+      toast.error("Failed to book from QR code");
     }
   };
   
@@ -98,7 +102,13 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
       {sortedBookings.map((booking) => (
         <div 
           key={booking.id} 
-          className="bg-white rounded-lg shadow p-4 border-l-4 border-primary"
+          className={`bg-white rounded-lg shadow p-4 border-l-4 ${
+            booking.status === 'active'
+              ? 'border-l-green-500'
+              : booking.status === 'cancelled'
+              ? 'border-l-red-500'
+              : 'border-l-gray-300'
+          }`}
         >
           <div className="flex flex-wrap justify-between items-start gap-2">
             <div>
@@ -107,7 +117,7 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                 {booking.slotType === 'normal' ? (
                   <Car className="h-4 w-4 text-gray-600" />
                 ) : (
-                  <Zap className="h-4 w-4 text-parking-electric" />
+                  <Zap className="h-4 w-4 text-blue-500" />
                 )}
                 {getStatusBadge(booking.status)}
               </div>
@@ -130,23 +140,34 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Quick Booking QR Code</DialogTitle>
+                    <DialogTitle>Booking QR Code</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col items-center justify-center p-4">
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generateQRData(booking))}`}
-                      alt="Quick Booking QR Code"
+                      alt="Booking QR Code"
                       className="w-48 h-48"
                     />
-                    <p className="text-sm text-gray-500 mt-4 text-center">
-                      Scan this QR code to quickly book this slot
-                    </p>
-                    <Button 
-                      className="mt-4"
-                      onClick={() => handleBookFromQR(generateQRData(booking))}
-                    >
-                      Book Now
-                    </Button>
+                    <div className="mt-4 text-center space-y-2">
+                      <p className="text-sm">
+                        <span className="font-semibold">Slot:</span> {booking.slotName} ({booking.slotType})
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-semibold">Date:</span> {formatDate(booking.startTime)}
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-semibold">Time:</span> {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-4">
+                        Scan this QR code to quickly book this slot
+                      </p>
+                      <Button 
+                        className="mt-2"
+                        onClick={() => handleBookFromQR(generateQRData(booking))}
+                      >
+                        Book Now
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
