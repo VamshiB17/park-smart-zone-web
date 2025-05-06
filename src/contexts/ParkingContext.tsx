@@ -4,6 +4,12 @@ import { ParkingSlot, Booking, SlotType, SlotStatus, generateMockSlots, generate
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 
+// Shared database simulation
+const sharedDatabase = {
+  slots: generateMockSlots(),
+  bookings: [] as Booking[],
+};
+
 interface ParkingContextType {
   slots: ParkingSlot[];
   bookings: Booking[];
@@ -15,6 +21,7 @@ interface ParkingContextType {
   cancelBooking: (bookingId: string) => void;
   getSlotById: (slotId: string) => ParkingSlot | undefined;
   getAvailableSlots: (date: Date) => ParkingSlot[];
+  refreshData: () => void;
 }
 
 const ParkingContext = createContext<ParkingContextType | null>(null);
@@ -33,16 +40,24 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
 
-  // Initialize with mock data
-  useEffect(() => {
-    const mockSlots = generateMockSlots();
-    setSlots(mockSlots);
+  // Initialize with shared database data
+  const refreshData = () => {
+    setSlots([...sharedDatabase.slots]);
+    setBookings([...sharedDatabase.bookings]);
     
     if (currentUser) {
-      const mockBookings = generateMockBookings(currentUser.id);
-      setBookings(mockBookings);
-      setUserBookings(mockBookings.filter(booking => booking.userId === currentUser.id));
+      setUserBookings(sharedDatabase.bookings.filter(booking => booking.userId === currentUser.id));
     }
+  };
+
+  // Initialize with mock data
+  useEffect(() => {
+    // Initialize shared database with mock bookings if empty
+    if (sharedDatabase.bookings.length === 0 && currentUser) {
+      sharedDatabase.bookings = generateMockBookings(currentUser.id);
+    }
+    
+    refreshData();
   }, [currentUser]);
 
   // Filter user bookings when currentUser changes
@@ -63,16 +78,17 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       floor,
     };
     
-    setSlots(prev => [...prev, newSlot]);
+    sharedDatabase.slots = [...sharedDatabase.slots, newSlot];
+    refreshData();
     toast.success(`Added new ${type} parking slot: ${name}`);
   };
 
   const updateSlot = (id: string, updates: Partial<ParkingSlot>) => {
-    setSlots(prev => 
-      prev.map(slot => 
-        slot.id === id ? { ...slot, ...updates } : slot
-      )
+    sharedDatabase.slots = sharedDatabase.slots.map(slot => 
+      slot.id === id ? { ...slot, ...updates } : slot
     );
+    
+    refreshData();
     toast.success(`Updated slot ${updates.name || id}`);
   };
 
@@ -90,7 +106,8 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    setSlots(prev => prev.filter(slot => slot.id !== id));
+    sharedDatabase.slots = sharedDatabase.slots.filter(slot => slot.id !== id);
+    refreshData();
     toast.success(`Deleted slot ${slotToDelete.name}`);
   };
 
@@ -145,14 +162,18 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       status: 'active',
     };
     
-    setBookings(prev => [...prev, newBooking]);
+    sharedDatabase.bookings = [...sharedDatabase.bookings, newBooking];
     
     // Update slot status to occupied if the booking is for the current time
     const now = new Date();
     if (startTime <= now && endTime >= now) {
-      updateSlot(slotId, { status: 'occupied' });
+      const updatedSlot = { ...slot, status: 'occupied' };
+      sharedDatabase.slots = sharedDatabase.slots.map(s => 
+        s.id === slotId ? updatedSlot : s
+      );
     }
     
+    refreshData();
     toast.success(`Successfully booked slot ${slot.name}`);
   };
 
@@ -169,18 +190,22 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
     
     // Update booking status
-    setBookings(prev => 
-      prev.map(b => 
-        b.id === bookingId ? { ...b, status: 'cancelled' } : b
-      )
+    sharedDatabase.bookings = sharedDatabase.bookings.map(b => 
+      b.id === bookingId ? { ...b, status: 'cancelled' } : b
     );
     
     // Update slot status if it was occupied by this booking
     const now = new Date();
     if (booking.startTime <= now && booking.endTime >= now) {
-      updateSlot(booking.slotId, { status: 'available' });
+      const slotToUpdate = sharedDatabase.slots.find(s => s.id === booking.slotId);
+      if (slotToUpdate) {
+        sharedDatabase.slots = sharedDatabase.slots.map(s => 
+          s.id === booking.slotId ? { ...s, status: 'available' } : s
+        );
+      }
     }
     
+    refreshData();
     toast.success("Booking cancelled successfully");
   };
 
@@ -225,6 +250,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     cancelBooking,
     getSlotById,
     getAvailableSlots,
+    refreshData,
   };
 
   return <ParkingContext.Provider value={value}>{children}</ParkingContext.Provider>;

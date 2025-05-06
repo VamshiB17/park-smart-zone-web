@@ -40,16 +40,26 @@ const slotFormSchema = z.object({
 });
 
 export function SlotManagement() {
-  const { slots, addSlot, updateSlot, deleteSlot } = useParkingContext();
+  const { slots, addSlot, updateSlot, deleteSlot, refreshData } = useParkingContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ParkingSlot | null>(null);
+  
+  // Add a refresh effect
+  React.useEffect(() => {
+    // Refresh data every 10 seconds to keep admin panel updated
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
   
   const form = useForm<z.infer<typeof slotFormSchema>>({
     resolver: zodResolver(slotFormSchema),
     defaultValues: {
       name: '',
       type: 'normal',
-      floor: 1
+      floor: '1'
     }
   });
   
@@ -77,7 +87,7 @@ export function SlotManagement() {
     form.reset({
       name: slot.name,
       type: slot.type,
-      floor: slot.floor.toString(),
+      floor: String(slot.floor),  // Convert number to string for the form
     });
     setIsDialogOpen(true);
   };

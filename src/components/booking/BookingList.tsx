@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,17 @@ interface BookingListProps {
 }
 
 export function BookingList({ bookings, onCancel, isAdmin = false }: BookingListProps) {
-  const { bookSlot } = useParkingContext();
+  const { bookSlot, refreshData } = useParkingContext();
+  
+  // Add auto-refresh for real-time updates
+  useEffect(() => {
+    // Refresh data every 10 seconds to keep bookings updated
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
   
   const formatDate = (date: Date | string) => {
     return format(new Date(date), 'PPP');

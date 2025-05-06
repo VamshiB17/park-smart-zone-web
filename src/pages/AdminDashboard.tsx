@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,8 +11,21 @@ import { BookingList } from '@/components/booking/BookingList';
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, bookings } = useParkingContext();
+  const { slots, bookings, refreshData } = useParkingContext();
   const navigate = useNavigate();
+  
+  // Setup periodic refresh for real-time updates
+  useEffect(() => {
+    // Initial refresh
+    refreshData();
+    
+    // Set up interval for periodic refresh
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
   
   // Redirect if not logged in or not an admin
   if (!currentUser || !isAdmin) {

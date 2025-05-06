@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,8 +12,21 @@ import { Car, Zap } from 'lucide-react';
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const { slots, userBookings, cancelBooking } = useParkingContext();
+  const { slots, userBookings, cancelBooking, refreshData } = useParkingContext();
   const navigate = useNavigate();
+  
+  // Setup periodic refresh for real-time updates
+  useEffect(() => {
+    // Initial refresh
+    refreshData();
+    
+    // Set up interval for periodic refresh
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
   
   // Redirect if not logged in
   if (!currentUser) {
