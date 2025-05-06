@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ParkingSlot, Booking, SlotType, SlotStatus, generateMockSlots, generateMockBookings } from '@/types';
 import { useAuth } from './AuthContext';
@@ -164,14 +163,11 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     
     sharedDatabase.bookings = [...sharedDatabase.bookings, newBooking];
     
-    // Update slot status to occupied if the booking is for the current time
-    const now = new Date();
-    if (startTime <= now && endTime >= now) {
-      const updatedSlot = { ...slot, status: 'occupied' as SlotStatus }; // Explicitly type as SlotStatus
-      sharedDatabase.slots = sharedDatabase.slots.map(s => 
-        s.id === slotId ? updatedSlot : s
-      );
-    }
+    // Immediately update slot status to occupied when booked
+    // This ensures it shows as booked in all views right away
+    sharedDatabase.slots = sharedDatabase.slots.map(s => 
+      s.id === slotId ? { ...s, status: 'occupied' as SlotStatus } : s
+    );
     
     refreshData();
     toast.success(`Successfully booked slot ${slot.name}`);
@@ -194,15 +190,12 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       b.id === bookingId ? { ...b, status: 'cancelled' } : b
     );
     
-    // Update slot status if it was occupied by this booking
-    const now = new Date();
-    if (booking.startTime <= now && booking.endTime >= now) {
-      const slotToUpdate = sharedDatabase.slots.find(s => s.id === booking.slotId);
-      if (slotToUpdate) {
-        sharedDatabase.slots = sharedDatabase.slots.map(s => 
-          s.id === booking.slotId ? { ...s, status: 'available' as SlotStatus } : s // Explicitly type as SlotStatus
-        );
-      }
+    // Update slot status back to available
+    const slotToUpdate = sharedDatabase.slots.find(s => s.id === booking.slotId);
+    if (slotToUpdate) {
+      sharedDatabase.slots = sharedDatabase.slots.map(s => 
+        s.id === booking.slotId ? { ...s, status: 'available' as SlotStatus } : s
+      );
     }
     
     refreshData();

@@ -3,6 +3,7 @@ import React from 'react';
 import { ParkingSlot as ParkingSlotType } from '@/types';
 import { cn } from '@/lib/utils';
 import { Car, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ParkingSlotProps {
   slot: ParkingSlotType;
@@ -18,7 +19,7 @@ export function ParkingSlot({ slot, onClick, selected, disabled }: ParkingSlotPr
     'parking-slot relative rounded-lg border p-4 transition-all',
     isAvailable 
       ? 'bg-[#F2FCE2] border-green-300 hover:border-green-500 text-green-800' // Green for available slots
-      : 'bg-red-50 border-red-300 text-red-800', // Red for booked/occupied slots
+      : 'bg-red-100 border-red-300 text-red-800', // Brighter red for booked/occupied slots
     slot.type === 'electric' && 'border-l-4 border-l-blue-500',
     selected && 'ring-2 ring-blue-500 ring-offset-2',
     onClick && isAvailable && 'cursor-pointer hover:shadow-md'
@@ -39,9 +40,12 @@ export function ParkingSlot({ slot, onClick, selected, disabled }: ParkingSlotPr
           ) : (
             <Zap className="h-5 w-5" />
           )}
-          <span className="text-sm font-medium">
+          <Badge 
+            variant={isAvailable ? "success" : "destructive"}
+            className="text-xs"
+          >
             {isAvailable ? 'Available' : 'Occupied'}
-          </span>
+          </Badge>
         </div>
       </div>
     </div>
