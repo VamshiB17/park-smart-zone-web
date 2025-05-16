@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ParkingSlot, Booking, SlotType, SlotStatus, generateMockSlots, generateMockBookings } from '@/types';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
@@ -16,11 +17,19 @@ interface ParkingContextType {
   addSlot: (name: string, type: SlotType, floor: number) => void;
   updateSlot: (id: string, updates: Partial<ParkingSlot>) => void;
   deleteSlot: (id: string) => void;
-  bookSlot: (slotId: string, startTime: Date, endTime: Date) => void;
+  bookSlot: (slotId: string, startTime: Date, endTime: Date) => Promise<Booking | undefined>;
   cancelBooking: (bookingId: string) => void;
   getSlotById: (slotId: string) => ParkingSlot | undefined;
   getAvailableSlots: (date: Date) => ParkingSlot[];
   refreshData: () => void;
+  isOnline: boolean;
+  metrics: {
+    totalBookings: number;
+    activeBookings: number;
+    completedBookings: number;
+    cancelledBookings: number;
+    lastRefreshTime: Date | null;
+  };
 }
 
 const ParkingContext = createContext<ParkingContextType | null>(null);
@@ -33,21 +42,137 @@ export function useParkingContext() {
   return context;
 }
 
+// Create a mock WebSocket for real-time updates simulation
+class MockWebSocket {
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: ((error: any) => void) | null = null;
+  
+  constructor(url: string) {
+    // Simulate connection established
+    setTimeout(() => {
+      if (this.onopen) this.onopen();
+    }, 500);
+    
+    // Set up periodic updates
+    setInterval(() => {
+      if (this.onmessage && Math.random() > 0.7) {
+        // Simulate receiving data
+        this.onmessage({
+          data: JSON.stringify({
+            type: 'update',
+            timestamp: new Date().toISOString()
+          })
+        });
+      }
+    }, 5000);
+  }
+  
+  send(data: string) {
+    // Simulate sending data
+    console.log('WebSocket sent:', data);
+  }
+  
+  close() {
+    if (this.onclose) this.onclose();
+  }
+}
+
 export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
   const [slots, setSlots] = useState<ParkingSlot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [ws, setWs] = useState<MockWebSocket | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalBookings: 0,
+    activeBookings: 0,
+    completedBookings: 0,
+    cancelledBookings: 0,
+    lastRefreshTime: null as Date | null,
+  });
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const mockWs = new MockWebSocket('wss://parksmart.example/realtime');
+    
+    mockWs.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+    
+    mockWs.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'update') {
+          refreshData();
+        }
+      } catch (e) {
+        console.error('Error parsing WebSocket message', e);
+      }
+    };
+    
+    mockWs.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+    
+    setWs(mockWs);
+    
+    return () => {
+      mockWs.close();
+    };
+  }, []);
+  
+  // Handle online/offline events
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success("You're back online");
+      
+      // Sync any offline bookings
+      const offlineBookings = JSON.parse(localStorage.getItem('offlineBookings') || '[]');
+      if (offlineBookings.length > 0) {
+        toast.info(`Syncing ${offlineBookings.length} offline bookings...`);
+        // In a real app, this would send the offline bookings to the server
+      }
+      
+      // Refresh data
+      refreshData();
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.error("You're offline. Limited functionality available.");
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Initialize with shared database data
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     setSlots([...sharedDatabase.slots]);
     setBookings([...sharedDatabase.bookings]);
     
     if (currentUser) {
       setUserBookings(sharedDatabase.bookings.filter(booking => booking.userId === currentUser.id));
     }
-  };
+    
+    // Update metrics
+    setMetrics({
+      totalBookings: sharedDatabase.bookings.length,
+      activeBookings: sharedDatabase.bookings.filter(b => b.status === 'active').length,
+      completedBookings: sharedDatabase.bookings.filter(b => b.status === 'completed').length,
+      cancelledBookings: sharedDatabase.bookings.filter(b => b.status === 'cancelled').length,
+      lastRefreshTime: new Date(),
+    });
+  }, [currentUser]);
 
   // Initialize with mock data
   useEffect(() => {
@@ -57,7 +182,14 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
     
     refreshData();
-  }, [currentUser]);
+    
+    // Setup periodic refresh for real-time updates
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 3000);
+    
+    return () => clearInterval(intervalId);
+  }, [currentUser, refreshData]);
 
   // Filter user bookings when currentUser changes
   useEffect(() => {
@@ -68,30 +200,36 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, bookings]);
 
-  const addSlot = (name: string, type: SlotType, floor: number) => {
+  const addSlot = useCallback((name: string, type: SlotType, floor: number) => {
     const newSlot: ParkingSlot = {
       id: `slot-${Date.now()}`,
       name,
       type,
-      status: 'available' as SlotStatus, // Explicitly type as SlotStatus
+      status: 'available' as SlotStatus,
       floor,
     };
     
     sharedDatabase.slots = [...sharedDatabase.slots, newSlot];
     refreshData();
     toast.success(`Added new ${type} parking slot: ${name}`);
-  };
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_added', slot: newSlot }));
+  }, [refreshData, ws]);
 
-  const updateSlot = (id: string, updates: Partial<ParkingSlot>) => {
+  const updateSlot = useCallback((id: string, updates: Partial<ParkingSlot>) => {
     sharedDatabase.slots = sharedDatabase.slots.map(slot => 
       slot.id === id ? { ...slot, ...updates } : slot
     );
     
     refreshData();
     toast.success(`Updated slot ${updates.name || id}`);
-  };
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_updated', slotId: id, updates }));
+  }, [refreshData, ws]);
 
-  const deleteSlot = (id: string) => {
+  const deleteSlot = useCallback((id: string) => {
     const slotToDelete = slots.find(slot => slot.id === id);
     if (!slotToDelete) return;
     
@@ -108,9 +246,12 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     sharedDatabase.slots = sharedDatabase.slots.filter(slot => slot.id !== id);
     refreshData();
     toast.success(`Deleted slot ${slotToDelete.name}`);
-  };
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_deleted', slotId: id }));
+  }, [slots, bookings, refreshData, ws]);
 
-  const bookSlot = (slotId: string, startTime: Date, endTime: Date) => {
+  const bookSlot = useCallback(async (slotId: string, startTime: Date, endTime: Date): Promise<Booking | undefined> => {
     if (!currentUser) {
       toast.error("You must be logged in to book a slot");
       return;
@@ -161,6 +302,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       status: 'active',
     };
     
+    // Add booking to database
     sharedDatabase.bookings = [...sharedDatabase.bookings, newBooking];
     
     // Immediately update slot status to occupied when booked
@@ -171,9 +313,23 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     
     refreshData();
     toast.success(`Successfully booked slot ${slot.name}`);
-  };
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'booking_created', booking: newBooking }));
+    
+    // For offline support, store in local storage
+    try {
+      const offlineBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+      offlineBookings.push(newBooking);
+      localStorage.setItem('userBookings', JSON.stringify(offlineBookings));
+    } catch (err) {
+      console.error('Error saving booking to local storage', err);
+    }
+    
+    return newBooking;
+  }, [currentUser, slots, bookings, refreshData, ws]);
 
-  const cancelBooking = (bookingId: string) => {
+  const cancelBooking = useCallback((bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking) {
       toast.error("Booking not found");
@@ -200,13 +356,27 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     
     refreshData();
     toast.success("Booking cancelled successfully");
-  };
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'booking_cancelled', bookingId }));
+    
+    // Update offline storage
+    try {
+      let offlineBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+      offlineBookings = offlineBookings.map((b: Booking) => 
+        b.id === bookingId ? { ...b, status: 'cancelled' } : b
+      );
+      localStorage.setItem('userBookings', JSON.stringify(offlineBookings));
+    } catch (err) {
+      console.error('Error updating local storage', err);
+    }
+  }, [bookings, refreshData, ws]);
 
-  const getSlotById = (slotId: string) => {
+  const getSlotById = useCallback((slotId: string) => {
     return slots.find(slot => slot.id === slotId);
-  };
+  }, [slots]);
 
-  const getAvailableSlots = (date: Date) => {
+  const getAvailableSlots = useCallback((date: Date) => {
     return slots.filter(slot => {
       // If slot is occupied, check if there's a booking that overlaps with the requested date
       if (slot.status === 'occupied') {
@@ -230,7 +400,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       // If slot is available, it's available
       return true;
     });
-  };
+  }, [slots, bookings]);
 
   const value = {
     slots,
@@ -244,6 +414,8 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     getSlotById,
     getAvailableSlots,
     refreshData,
+    isOnline,
+    metrics,
   };
 
   return <ParkingContext.Provider value={value}>{children}</ParkingContext.Provider>;

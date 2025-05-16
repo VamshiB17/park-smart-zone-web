@@ -5,20 +5,29 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { BookingList } from '@/components/booking/BookingList';
 import { SlotGrid } from '@/components/parking/SlotGrid';
-import { Car, Zap } from 'lucide-react';
+import { Car, Zap, HelpCircle, AlertCircle, WifiOff } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const { slots, userBookings, cancelBooking, refreshData } = useParkingContext();
+  const { slots, userBookings, cancelBooking, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
+  const [firstVisit, setFirstVisit] = React.useState(false);
   
   // Setup periodic refresh for real-time updates with shorter interval
   useEffect(() => {
     // Initial refresh
     refreshData();
+    
+    // Check if this is the user's first visit
+    const hasVisitedBefore = localStorage.getItem('hasVisitedDashboard');
+    if (!hasVisitedBefore) {
+      setFirstVisit(true);
+      localStorage.setItem('hasVisitedDashboard', 'true');
+    }
     
     // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
@@ -51,8 +60,42 @@ export default function Dashboard() {
       <div className="space-y-8 py-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">User Dashboard</h1>
-          <Button onClick={() => navigate('/slots')}>Book a Slot</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/help')}>
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Help Center
+            </Button>
+            <Button onClick={() => navigate('/slots')}>Book a Slot</Button>
+          </div>
         </div>
+        
+        {/* First Visit Tutorial */}
+        {firstVisit && (
+          <Alert className="bg-blue-50 text-blue-800 border-blue-300">
+            <AlertTitle className="flex items-center">
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Welcome to ParkSmart!
+            </AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>This is your dashboard where you can see available spots and manage your bookings.</p>
+              <p>To get started, click "Book a Slot" or check out our <Button variant="link" className="p-0 h-auto text-blue-600" onClick={() => navigate('/help')}>help center</Button> for a complete tutorial.</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setFirstVisit(false)}>
+                Got it
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Offline Alert */}
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <AlertTitle>You're currently offline</AlertTitle>
+            <AlertDescription>
+              Limited functionality is available. Your active bookings are saved locally and will sync when you reconnect.
+            </AlertDescription>
+          </Alert>
+        )}
         
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -66,6 +109,11 @@ export default function Dashboard() {
                 {availableNormalSlots + availableElectricSlots}
               </div>
             </CardContent>
+            {metrics.lastRefreshTime && (
+              <CardFooter className="text-xs text-gray-500 pt-0">
+                Last updated: {metrics.lastRefreshTime.toLocaleTimeString()}
+              </CardFooter>
+            )}
           </Card>
           
           <Card>

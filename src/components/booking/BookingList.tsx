@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { toast } from 'sonner';
+import { QRCodeDisplay } from './QRCodeDisplay';
 
 interface BookingListProps {
   bookings: Booking[];
@@ -53,18 +53,6 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
       default:
         return null;
     }
-  };
-  
-  const generateQRData = (booking: Booking) => {
-    // Include booking details and slot information for quick booking
-    return JSON.stringify({
-      action: 'book',
-      slotId: booking.slotId,
-      slotName: booking.slotName,
-      slotType: booking.slotType,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-    });
   };
 
   const handleBookFromQR = async (qrData: string) => {
@@ -143,11 +131,8 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                     <DialogTitle>Booking QR Code</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col items-center justify-center p-4">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generateQRData(booking))}`}
-                      alt="Booking QR Code"
-                      className="w-48 h-48"
-                    />
+                    <QRCodeDisplay booking={booking} showFlashlightToggle={true} />
+                    
                     <div className="mt-4 text-center space-y-2">
                       <p className="text-sm">
                         <span className="font-semibold">Slot:</span> {booking.slotName} ({booking.slotType})
@@ -163,7 +148,12 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                       </p>
                       <Button 
                         className="mt-2"
-                        onClick={() => handleBookFromQR(generateQRData(booking))}
+                        onClick={() => handleBookFromQR(JSON.stringify({
+                          action: 'book',
+                          slotId: booking.slotId,
+                          startTime: booking.startTime,
+                          endTime: booking.endTime,
+                        }))}
                       >
                         Book Now
                       </Button>
