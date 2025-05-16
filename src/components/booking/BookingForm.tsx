@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -186,7 +185,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
             </Alert>
           )}
           {!wsConnected && isOnline && (
-            <Alert variant="warning" className="mt-2 bg-yellow-50 text-yellow-800 border-yellow-300">
+            <Alert variant="default" className="mt-2 bg-yellow-50 text-yellow-800 border-yellow-300">
               <AlertTitle>Reconnecting...</AlertTitle>
               <AlertDescription>
                 Live updates temporarily unavailable. Your bookings will still be processed.

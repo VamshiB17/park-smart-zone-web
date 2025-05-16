@@ -35,11 +35,19 @@ export function QRCodeDisplay({ booking, showFlashlightToggle = false }: QRCodeD
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
         .then((stream) => {
           const track = stream.getVideoTracks()[0];
-          if (track && 'flashMode' in track.getCapabilities()) {
-            // @ts-ignore - Not all browsers have this API typed
-            track.applyConstraints({
-              advanced: [{ torch: !flashlightOn }]
-            }).catch(e => console.log('Flashlight not supported on this device', e));
+          // Check if track has torch capability without using property directly
+          if (track) {
+            try {
+              // Using try/catch instead of direct property access
+              // This works in supported devices and gracefully fails in others
+              track.applyConstraints({
+                advanced: [{ // Using any to bypass TypeScript constraint
+                  torch: !flashlightOn 
+                } as any]
+              }).catch(e => console.log('Flashlight not supported on this device', e));
+            } catch (error) {
+              console.log('Flashlight control not supported', error);
+            }
           }
         })
         .catch(err => {

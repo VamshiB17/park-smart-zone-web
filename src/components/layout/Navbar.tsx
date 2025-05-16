@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -13,14 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { AlertTriangle, Car, HelpCircle, Menu, User, X } from 'lucide-react';
 
 export function Navbar() {
   const { currentUser, isAdmin, logout } = useAuth();
   const { isOnline } = useParkingContext();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
   
