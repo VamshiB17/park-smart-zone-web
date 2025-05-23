@@ -24,12 +24,12 @@ export default function AdminDashboard() {
   const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   
-  // Setup periodic refresh for real-time updates
+  // Setup periodic refresh for real-time updates with same interval as user dashboard
   useEffect(() => {
     // Initial refresh
     refreshData();
     
-    // Set up interval for periodic refresh
+    // Set up interval for periodic refresh (matching user dashboard refresh rate)
     const intervalId = setInterval(() => {
       refreshData();
     }, 3000); // Refresh every 3 seconds for more responsive updates
@@ -38,16 +38,25 @@ export default function AdminDashboard() {
   }, [refreshData]);
   
   // Redirect if not logged in or not an admin
-  if (!currentUser || !isAdmin) {
+  if (!currentUser) {
     navigate('/auth');
     return null;
   }
   
-  // Count slots
+  // Redirect regular users to their dashboard
+  if (!isAdmin) {
+    navigate('/dashboard');
+    return null;
+  }
+  
+  // Count slots (using the same calculation methods as user dashboard)
   const totalSlots = slots.length;
+  const availableNormalSlots = slots.filter(slot => slot.type === 'normal' && slot.status === 'available').length;
+  const availableElectricSlots = slots.filter(slot => slot.type === 'electric' && slot.status === 'available').length;
   const normalSlots = slots.filter(slot => slot.type === 'normal').length;
   const electricSlots = slots.filter(slot => slot.type === 'electric').length;
   const occupiedSlots = slots.filter(slot => slot.status === 'occupied').length;
+  const availableSlots = slots.filter(slot => slot.status === 'available').length;
   
   // Count bookings
   const activeBookings = bookings.filter(booking => booking.status === 'active');
@@ -122,9 +131,14 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-3xl font-bold">{totalSlots}</div>
               <div className="text-sm text-muted-foreground mt-1">
-                {occupiedSlots} currently occupied
+                {availableSlots} available, {occupiedSlots} occupied
               </div>
             </CardContent>
+            {metrics.lastRefreshTime && (
+              <CardFooter className="text-xs text-gray-500 pt-0">
+                Last updated: {metrics.lastRefreshTime.toLocaleTimeString()}
+              </CardFooter>
+            )}
           </Card>
           
           <Card>
@@ -136,11 +150,11 @@ export default function AdminDashboard() {
               <div className="space-y-2">
                 <div>
                   <span className="text-sm text-muted-foreground">Normal:</span>
-                  <span className="float-right font-medium">{normalSlots}</span>
+                  <span className="float-right font-medium">{normalSlots} ({availableNormalSlots} available)</span>
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">Electric:</span>
-                  <span className="float-right font-medium">{electricSlots}</span>
+                  <span className="float-right font-medium">{electricSlots} ({availableElectricSlots} available)</span>
                 </div>
               </div>
             </CardContent>

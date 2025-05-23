@@ -9,9 +9,15 @@ export default function AdminSlots() {
   const { currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
   
-  // Redirect if not logged in or not an admin
-  if (!currentUser || !isAdmin) {
+  // Redirect if not logged in
+  if (!currentUser) {
     navigate('/auth');
+    return null;
+  }
+  
+  // Redirect regular users to their dashboard
+  if (!isAdmin) {
+    navigate('/dashboard');
     return null;
   }
   

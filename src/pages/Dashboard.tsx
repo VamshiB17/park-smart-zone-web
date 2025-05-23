@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -12,7 +11,7 @@ import { Car, Zap, HelpCircle, AlertCircle, WifiOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function Dashboard() {
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { slots, userBookings, cancelBooking, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   const [firstVisit, setFirstVisit] = React.useState(false);
@@ -40,6 +39,12 @@ export default function Dashboard() {
   // Redirect if not logged in
   if (!currentUser) {
     navigate('/auth');
+    return null;
+  }
+  
+  // Redirect admin to admin dashboard
+  if (isAdmin) {
+    navigate('/admin/dashboard');
     return null;
   }
   

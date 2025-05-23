@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -51,54 +52,58 @@ export function Navbar() {
               <nav className="ml-6 flex items-center space-x-4">
                 <NavigationMenu>
                   <NavigationMenuList>
-                    <NavigationMenuItem>
-                      <Link 
-                        to="/dashboard"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          isActive('/dashboard') && 'bg-accent text-accent-foreground'
-                        )}
-                      >
-                        Dashboard
-                      </Link>
-                    </NavigationMenuItem>
-                    
-                    <NavigationMenuItem>
-                      <Link 
-                        to="/slots"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          isActive('/slots') && 'bg-accent text-accent-foreground'
-                        )}
-                      >
-                        Parking Slots
-                      </Link>
-                    </NavigationMenuItem>
-                    
-                    <NavigationMenuItem>
-                      <Link 
-                        to="/bookings"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          isActive('/bookings') && 'bg-accent text-accent-foreground'
-                        )}
-                      >
-                        My Bookings
-                      </Link>
-                    </NavigationMenuItem>
-                    
-                    <NavigationMenuItem>
-                      <Link 
-                        to="/help"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          isActive('/help') && 'bg-accent text-accent-foreground'
-                        )}
-                      >
-                        <HelpCircle className="h-4 w-4 mr-1" />
-                        Help
-                      </Link>
-                    </NavigationMenuItem>
+                    {!isAdmin && (
+                      <>
+                        <NavigationMenuItem>
+                          <Link 
+                            to="/dashboard"
+                            className={cn(
+                              navigationMenuTriggerStyle(),
+                              isActive('/dashboard') && 'bg-accent text-accent-foreground'
+                            )}
+                          >
+                            Dashboard
+                          </Link>
+                        </NavigationMenuItem>
+                        
+                        <NavigationMenuItem>
+                          <Link 
+                            to="/slots"
+                            className={cn(
+                              navigationMenuTriggerStyle(),
+                              isActive('/slots') && 'bg-accent text-accent-foreground'
+                            )}
+                          >
+                            Parking Slots
+                          </Link>
+                        </NavigationMenuItem>
+                        
+                        <NavigationMenuItem>
+                          <Link 
+                            to="/bookings"
+                            className={cn(
+                              navigationMenuTriggerStyle(),
+                              isActive('/bookings') && 'bg-accent text-accent-foreground'
+                            )}
+                          >
+                            My Bookings
+                          </Link>
+                        </NavigationMenuItem>
+                        
+                        <NavigationMenuItem>
+                          <Link 
+                            to="/help"
+                            className={cn(
+                              navigationMenuTriggerStyle(),
+                              isActive('/help') && 'bg-accent text-accent-foreground'
+                            )}
+                          >
+                            <HelpCircle className="h-4 w-4 mr-1" />
+                            Help
+                          </Link>
+                        </NavigationMenuItem>
+                      </>
+                    )}
                     
                     {isAdmin && (
                       <NavigationMenuItem>
@@ -201,19 +206,23 @@ export function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/bookings')}>
-                      My Bookings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/help')}>
-                      Help Center
-                    </DropdownMenuItem>
+                    
+                    {!isAdmin && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                          Dashboard
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/bookings')}>
+                          My Bookings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/help')}>
+                          Help Center
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
                     {isAdmin && (
                       <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Admin</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
                           Admin Dashboard
                         </DropdownMenuItem>
@@ -225,6 +234,7 @@ export function Navbar() {
                         </DropdownMenuItem>
                       </>
                     )}
+                    
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       Logout
@@ -243,47 +253,51 @@ export function Navbar() {
       {isMobile && mobileMenuOpen && currentUser && (
         <div className="bg-white border-t border-gray-200 py-2">
           <nav className="px-4 py-2 flex flex-col space-y-2">
-            <Link 
-              to="/dashboard" 
-              className={cn(
-                "px-3 py-2 rounded-md text-sm font-medium",
-                isActive('/dashboard') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
-            <Link 
-              to="/slots" 
-              className={cn(
-                "px-3 py-2 rounded-md text-sm font-medium",
-                isActive('/slots') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Parking Slots
-            </Link>
-            <Link 
-              to="/bookings" 
-              className={cn(
-                "px-3 py-2 rounded-md text-sm font-medium",
-                isActive('/bookings') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              My Bookings
-            </Link>
-            <Link 
-              to="/help" 
-              className={cn(
-                "px-3 py-2 rounded-md text-sm font-medium flex items-center",
-                isActive('/help') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <HelpCircle className="h-4 w-4 mr-2" />
-              Help Center
-            </Link>
+            {!isAdmin && (
+              <>
+                <Link 
+                  to="/dashboard" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium",
+                    isActive('/dashboard') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/slots" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium",
+                    isActive('/slots') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Parking Slots
+                </Link>
+                <Link 
+                  to="/bookings" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium",
+                    isActive('/bookings') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  My Bookings
+                </Link>
+                <Link 
+                  to="/help" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium flex items-center",
+                    isActive('/help') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Help Center
+                </Link>
+              </>
+            )}
             
             {isAdmin && (
               <>
