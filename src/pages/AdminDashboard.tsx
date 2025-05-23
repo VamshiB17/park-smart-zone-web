@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Car, Zap, User, Clock, Activity, WifiOff } from 'lucide-react';
+import { Car, Zap, User, Clock, Activity, WifiOff, MessageSquare } from 'lucide-react';
 import { BookingList } from '@/components/booking/BookingList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -18,11 +18,27 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
   const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
+  
+  // Sample feedback data - in a real app this would come from your database
+  const [userFeedback, setUserFeedback] = React.useState([
+    { id: '1', userName: 'John Doe', rating: 5, comment: 'Great experience! Very easy to use.', date: '2025-05-22' },
+    { id: '2', userName: 'Jane Smith', rating: 4, comment: 'The app works well but could be faster.', date: '2025-05-22' },
+    { id: '3', userName: 'Alex Johnson', rating: 3, comment: 'Sometimes had issues with the QR code scanner.', date: '2025-05-21' }
+  ]);
   
   // Setup periodic refresh for real-time updates with same interval as user dashboard
   useEffect(() => {
@@ -239,6 +255,57 @@ export default function AdminDashboard() {
           <CardFooter className="text-xs text-gray-500">
             Last updated: {metrics.lastRefreshTime ? metrics.lastRefreshTime.toLocaleTimeString() : 'Never'}
           </CardFooter>
+        </Card>
+        
+        {/* User Feedback Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              User Feedback
+            </CardTitle>
+            <CardDescription>
+              Recent feedback submitted by users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Comment</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {userFeedback.length > 0 ? (
+                  userFeedback.map((feedback) => (
+                    <TableRow key={feedback.id}>
+                      <TableCell className="font-medium">{feedback.userName}</TableCell>
+                      <TableCell>
+                        {/* Simple star display */}
+                        <div className="flex items-center">
+                          <span className="mr-2">{feedback.rating}/5</span>
+                          <div className="text-yellow-400">
+                            {'★'.repeat(feedback.rating)}
+                            {'☆'.repeat(5 - feedback.rating)}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{feedback.comment}</TableCell>
+                      <TableCell>{feedback.date}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">No feedback available</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+              <TableCaption>A list of user feedback for service improvement.</TableCaption>
+            </Table>
+          </CardContent>
         </Card>
         
         {/* Recent Bookings */}

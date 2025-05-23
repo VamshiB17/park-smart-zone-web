@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,17 +9,22 @@ export default function AdminSlots() {
   const { currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
   
-  // Redirect if not logged in
-  if (!currentUser) {
-    navigate('/auth');
-    return null;
-  }
+  useEffect(() => {
+    // Redirect if not logged in
+    if (!currentUser) {
+      navigate('/auth');
+      return;
+    }
+    
+    // Redirect regular users to their dashboard
+    if (!isAdmin) {
+      navigate('/dashboard');
+      return;
+    }
+  }, [currentUser, isAdmin, navigate]);
   
-  // Redirect regular users to their dashboard
-  if (!isAdmin) {
-    navigate('/dashboard');
-    return null;
-  }
+  // Prevent flash of content before redirect
+  if (!currentUser || !isAdmin) return null;
   
   return (
     <PageLayout>
