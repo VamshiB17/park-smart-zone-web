@@ -43,7 +43,7 @@ export function BookingSuccessDialog({ open, onClose, booking }: BookingSuccessD
         {!showFeedback && booking && (
           <div className="space-y-6">
             <div className="flex flex-col items-center justify-center p-4">
-              <QRCodeDisplay booking={booking} showFlashlightToggle={true} />
+              <QRCodeDisplay booking={booking} />
               
               <div className="mt-4 text-center space-y-2">
                 <p className="text-sm">

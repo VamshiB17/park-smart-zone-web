@@ -1,5 +1,7 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,9 @@ const contactFormSchema = z.object({
 });
 
 export default function Help() {
+  const { currentUser, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  
   const form = useForm<z.infer<typeof contactFormSchema>>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
@@ -29,6 +34,16 @@ export default function Help() {
       message: "",
     },
   });
+
+  // Redirect admin users - they shouldn't access the help center
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin/dashboard');
+    }
+  }, [isAdmin, navigate]);
+  
+  // If user is admin, don't render the help page
+  if (isAdmin) return null;
 
   function onSubmit(data: z.infer<typeof contactFormSchema>) {
     toast.success("Support request submitted successfully");
@@ -97,8 +112,7 @@ export default function Help() {
                   <AccordionItem value="item-5">
                     <AccordionTrigger>How do I use the QR code?</AccordionTrigger>
                     <AccordionContent>
-                      Present the QR code on your screen to the scanner at the parking entrance. If lighting 
-                      conditions are poor, use the flashlight toggle feature to improve QR code visibility. 
+                      Present the QR code on your screen to the scanner at the parking entrance. 
                       The system will validate your booking and grant access.
                     </AccordionContent>
                   </AccordionItem>
@@ -143,8 +157,7 @@ export default function Help() {
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold">4. Using Your QR Code</h3>
                     <p className="text-gray-600">
-                      Access your booking from "My Bookings". Present the QR code at the parking entrance. 
-                      Use the flashlight feature if needed for better visibility in low light conditions.
+                      Access your booking from "My Bookings". Present the QR code at the parking entrance.
                     </p>
                   </div>
                   
