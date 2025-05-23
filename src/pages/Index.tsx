@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Car, CircleParking, Clock, Zap, User } from 'lucide-react';
+
 export default function Index() {
   const navigate = useNavigate();
   return <PageLayout>
