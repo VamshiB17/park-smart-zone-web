@@ -1,15 +1,11 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Car, CircleParking, Clock, Zap, User } from 'lucide-react';
-
 export default function Index() {
   const navigate = useNavigate();
-  
-  return (
-    <PageLayout>
+  return <PageLayout>
       {/* Hero Section */}
       <section className="py-12 md:py-24">
         <div className="container max-w-6xl mx-auto px-4 sm:px-6">
@@ -34,20 +30,11 @@ export default function Index() {
             <div className="md:w-1/2">
               <div className="bg-gray-100 rounded-lg overflow-hidden shadow-xl p-6 md:p-10">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`aspect-video rounded-md flex items-center justify-center ${
-                        i % 3 === 0 ? 'bg-parking-occupied/10 border border-parking-occupied' : 
-                        i % 4 === 0 ? 'bg-parking-electric/10 border border-parking-electric' :
-                        'bg-parking-available/10 border border-parking-available'
-                      }`}
-                    >
+                  {[...Array(6)].map((_, i) => <div key={i} className={`aspect-video rounded-md flex items-center justify-center ${i % 3 === 0 ? 'bg-parking-occupied/10 border border-parking-occupied' : i % 4 === 0 ? 'bg-parking-electric/10 border border-parking-electric' : 'bg-parking-available/10 border border-parking-available'}`}>
                       <span className="font-semibold">
                         {`A-${i + 1}`}
                       </span>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
             </div>
@@ -102,24 +89,14 @@ export default function Index() {
             Join thousands of drivers who have simplified their parking experience with ParkSmart.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button 
-              size="lg" 
-              variant="secondary"
-              onClick={() => navigate('/auth')}
-            >
+            <Button size="lg" variant="secondary" onClick={() => navigate('/auth')}>
               <User className="mr-2 h-4 w-4" /> Sign Up Now
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="border-white text-blue"
-              onClick={() => navigate('/admin/dashboard')}
-            >
+            <Button size="lg" variant="outline" onClick={() => navigate('/admin/dashboard')} className="border-white text-slate-950">
               Admin Login
             </Button>
           </div>
         </div>
       </section>
-    </PageLayout>
-  );
+    </PageLayout>;
 }
