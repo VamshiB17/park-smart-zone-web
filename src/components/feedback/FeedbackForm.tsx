@@ -20,15 +20,8 @@ const feedbackSchema = z.object({
   suggestions: z.string().optional(),
 });
 
-export type FeedbackData = z.infer<typeof feedbackSchema> & {
-  userId?: string;
-  userName?: string;
-  bookingId?: string;
-  submittedAt?: string;
-};
-
 type FeedbackFormProps = {
-  onComplete?: (data?: FeedbackData) => void;
+  onComplete?: () => void;
 };
 
 export function FeedbackForm({ onComplete }: FeedbackFormProps) {
@@ -47,7 +40,7 @@ export function FeedbackForm({ onComplete }: FeedbackFormProps) {
     toast.success('Thank you for your feedback!');
     
     if (onComplete) {
-      onComplete(data);
+      onComplete();
     }
   }
 

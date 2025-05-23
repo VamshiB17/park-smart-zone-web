@@ -11,7 +11,6 @@ import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { QRCodeDisplay } from '@/components/booking/QRCodeDisplay';
 import { Button } from '@/components/ui/button';
 import { Booking } from '@/types';
-import { useParkingContext } from '@/contexts/ParkingContext';
 
 type BookingSuccessDialogProps = {
   open: boolean;
@@ -21,20 +20,8 @@ type BookingSuccessDialogProps = {
 
 export function BookingSuccessDialog({ open, onClose, booking }: BookingSuccessDialogProps) {
   const [showFeedback, setShowFeedback] = React.useState(false);
-  const { submitFeedback } = useParkingContext();
   
-  const handleFeedbackComplete = (feedbackData: any) => {
-    if (booking && feedbackData) {
-      // Save the feedback with user and booking information
-      submitFeedback({
-        ...feedbackData,
-        userId: booking.userId,
-        userName: booking.userName,
-        bookingId: booking.id,
-        submittedAt: new Date().toISOString()
-      });
-    }
-    
+  const handleFeedbackComplete = () => {
     setShowFeedback(false);
     onClose();
   };
@@ -56,7 +43,7 @@ export function BookingSuccessDialog({ open, onClose, booking }: BookingSuccessD
         {!showFeedback && booking && (
           <div className="space-y-6">
             <div className="flex flex-col items-center justify-center p-4">
-              <QRCodeDisplay booking={booking} />
+              <QRCodeDisplay booking={booking} showFlashlightToggle={true} />
               
               <div className="mt-4 text-center space-y-2">
                 <p className="text-sm">

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useParkingContext } from '@/contexts/ParkingContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Car, Zap, User, Clock, Activity, WifiOff, MessageSquare } from 'lucide-react';
+import { Car, Zap, User, Clock, Activity, WifiOff } from 'lucide-react';
 import { BookingList } from '@/components/booking/BookingList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -18,20 +18,10 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Star } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, bookings, refreshData, isOnline, metrics, feedback } = useParkingContext();
+  const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   
   // Setup periodic refresh for real-time updates with same interval as user dashboard
@@ -95,27 +85,6 @@ export default function AdminDashboard() {
   // Calculate system performance metrics
   const systemUptime = "99.8%"; // This would come from a real monitoring system
   const averageBookingTime = "2.8 minutes"; // This would be calculated from actual user timing
-  
-  // Sort feedback in descending order by submission date (most recent first)
-  const sortedFeedback = [...feedback].sort((a, b) => {
-    return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
-  });
-  
-  // Generate star rating display
-  const renderStars = (rating: string) => {
-    const ratingNum = parseInt(rating, 10);
-    const stars = [];
-    
-    for (let i = 1; i <= 5; i++) {
-      if (i <= ratingNum) {
-        stars.push(<Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
-      } else {
-        stars.push(<Star key={i} className="h-4 w-4 text-gray-300" />);
-      }
-    }
-    
-    return <div className="flex">{stars}</div>;
-  };
   
   return (
     <PageLayout>
@@ -270,53 +239,6 @@ export default function AdminDashboard() {
           <CardFooter className="text-xs text-gray-500">
             Last updated: {metrics.lastRefreshTime ? metrics.lastRefreshTime.toLocaleTimeString() : 'Never'}
           </CardFooter>
-        </Card>
-        
-        {/* User Feedback Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              User Feedback
-            </CardTitle>
-            <CardDescription>
-              Recent feedback submitted by users
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Comment</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedFeedback.length > 0 ? (
-                  sortedFeedback.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.userName}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{item.rating}/5</span>
-                          {renderStars(item.rating)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.experience}</TableCell>
-                      <TableCell>{new Date(item.submittedAt).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center">No user feedback received yet.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-              <TableCaption>A list of user feedback for service improvement.</TableCaption>
-            </Table>
-          </CardContent>
         </Card>
         
         {/* Recent Bookings */}
