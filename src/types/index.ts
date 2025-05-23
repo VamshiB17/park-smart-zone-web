@@ -1,4 +1,3 @@
-
 // Slot Types
 export type SlotType = 'normal' | 'electric';
 export type SlotStatus = 'available' | 'occupied';
@@ -36,6 +35,13 @@ export interface Feedback {
   suggestions?: string;
   submittedAt: string;
 }
+
+// Booking utility functions
+export const cancelBookingUtil = (cancelBooking: (bookingId: string) => void, bookingId: string) => {
+  // This utility function wraps cancelBooking to make it compatible with components
+  // that expect multiple parameters
+  cancelBooking(bookingId);
+};
 
 // Mock Data Functions
 export const generateMockSlots = (): ParkingSlot[] => {

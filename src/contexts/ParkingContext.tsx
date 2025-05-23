@@ -5,11 +5,15 @@ import { ParkingSlot, Booking, generateMockSlots, generateMockBookings, Feedback
 interface ParkingContextType {
   slots: ParkingSlot[];
   bookings: Booking[];
+  userBookings: Booking[]; // Add this property that was missing
   feedback: Feedback[];
   refreshData: () => void;
   bookSlot: (booking: Omit<Booking, 'id' | 'createdAt'>) => Booking;
   cancelBooking: (bookingId: string) => void;
   submitFeedback: (feedbackData: Omit<Feedback, 'id'>) => void;
+  addSlot?: (slot: Omit<ParkingSlot, 'id'>) => ParkingSlot; // Add these admin operations
+  updateSlot?: (id: string, updates: Partial<ParkingSlot>) => ParkingSlot;
+  deleteSlot?: (id: string) => void;
   isOnline: boolean;
   metrics: {
     totalBookings: number;
@@ -246,15 +250,55 @@ export const ParkingProvider: React.FC<ParkingProviderProps> = ({ children }) =>
     return newFeedback;
   };
 
+  // Admin operations for slot management
+  const addSlot = (slotData: Omit<ParkingSlot, 'id'>): ParkingSlot => {
+    const newSlot: ParkingSlot = {
+      ...slotData,
+      id: `slot-${Date.now()}`,
+    };
+    
+    setSlots(prev => [...prev, newSlot]);
+    return newSlot;
+  };
+  
+  const updateSlot = (id: string, updates: Partial<ParkingSlot>): ParkingSlot => {
+    let updatedSlot: ParkingSlot | undefined;
+    
+    setSlots(prev => {
+      const newSlots = prev.map(slot => {
+        if (slot.id === id) {
+          updatedSlot = { ...slot, ...updates };
+          return updatedSlot;
+        }
+        return slot;
+      });
+      
+      return newSlots;
+    });
+    
+    return updatedSlot!;
+  };
+  
+  const deleteSlot = (id: string): void => {
+    setSlots(prev => prev.filter(slot => slot.id !== id));
+  };
+
+  // Filter bookings for current user (for user dashboard)
+  const userBookings = bookings.filter(booking => booking.userId === '1'); // Mock user ID for demo
+
   return (
     <ParkingContext.Provider value={{ 
       slots, 
       bookings,
+      userBookings, // Add the filtered user bookings
       feedback,
       refreshData, 
       bookSlot, 
       cancelBooking,
       submitFeedback,
+      addSlot,
+      updateSlot,
+      deleteSlot,
       isOnline,
       metrics,
     }}>

@@ -9,10 +9,11 @@ import { BookingList } from '@/components/booking/BookingList';
 import { SlotGrid } from '@/components/parking/SlotGrid';
 import { Car, Zap, HelpCircle, AlertCircle, WifiOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cancelBookingUtil } from '@/types';
 
 export default function Dashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, userBookings, cancelBooking, refreshData, isOnline, metrics } = useParkingContext();
+  const { slots = [], userBookings = [], cancelBooking, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   const [firstVisit, setFirstVisit] = React.useState(false);
   
@@ -37,15 +38,16 @@ export default function Dashboard() {
   }, [refreshData]);
   
   // Redirect if not logged in
-  if (!currentUser) {
-    navigate('/auth');
-    return null;
-  }
+  useEffect(() => {
+    if (!currentUser) {
+      navigate('/auth');
+    } else if (isAdmin) {
+      navigate('/admin/dashboard');
+    }
+  }, [currentUser, isAdmin, navigate]);
   
-  // Redirect admin to admin dashboard
-  if (isAdmin) {
-    navigate('/admin/dashboard');
-    return null;
+  if (!currentUser) {
+    return null; // Don't render anything if not logged in
   }
   
   // Count available slots
@@ -159,7 +161,7 @@ export default function Dashboard() {
           <CardContent>
             <BookingList 
               bookings={activeBookings} 
-              onCancel={cancelBooking} 
+              onCancel={(id) => cancelBooking(id)} 
             />
             
             {activeBookings.length === 0 && (
