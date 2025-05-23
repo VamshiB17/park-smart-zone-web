@@ -27,18 +27,12 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { Star } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
+  const { slots, bookings, refreshData, isOnline, metrics, feedback } = useParkingContext();
   const navigate = useNavigate();
-  
-  // Sample feedback data - in a real app this would come from your database
-  const [userFeedback, setUserFeedback] = React.useState([
-    { id: '1', userName: 'John Doe', rating: 5, comment: 'Great experience! Very easy to use.', date: '2025-05-22' },
-    { id: '2', userName: 'Jane Smith', rating: 4, comment: 'The app works well but could be faster.', date: '2025-05-22' },
-    { id: '3', userName: 'Alex Johnson', rating: 3, comment: 'Sometimes had issues with the QR code scanner.', date: '2025-05-21' }
-  ]);
   
   // Setup periodic refresh for real-time updates with same interval as user dashboard
   useEffect(() => {
@@ -101,6 +95,27 @@ export default function AdminDashboard() {
   // Calculate system performance metrics
   const systemUptime = "99.8%"; // This would come from a real monitoring system
   const averageBookingTime = "2.8 minutes"; // This would be calculated from actual user timing
+  
+  // Sort feedback in descending order by submission date (most recent first)
+  const sortedFeedback = [...feedback].sort((a, b) => {
+    return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+  });
+  
+  // Generate star rating display
+  const renderStars = (rating: string) => {
+    const ratingNum = parseInt(rating, 10);
+    const stars = [];
+    
+    for (let i = 1; i <= 5; i++) {
+      if (i <= ratingNum) {
+        stars.push(<Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
+      } else {
+        stars.push(<Star key={i} className="h-4 w-4 text-gray-300" />);
+      }
+    }
+    
+    return <div className="flex">{stars}</div>;
+  };
   
   return (
     <PageLayout>
@@ -279,27 +294,23 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userFeedback.length > 0 ? (
-                  userFeedback.map((feedback) => (
-                    <TableRow key={feedback.id}>
-                      <TableCell className="font-medium">{feedback.userName}</TableCell>
+                {sortedFeedback.length > 0 ? (
+                  sortedFeedback.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.userName}</TableCell>
                       <TableCell>
-                        {/* Simple star display */}
-                        <div className="flex items-center">
-                          <span className="mr-2">{feedback.rating}/5</span>
-                          <div className="text-yellow-400">
-                            {'★'.repeat(feedback.rating)}
-                            {'☆'.repeat(5 - feedback.rating)}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span>{item.rating}/5</span>
+                          {renderStars(item.rating)}
                         </div>
                       </TableCell>
-                      <TableCell>{feedback.comment}</TableCell>
-                      <TableCell>{feedback.date}</TableCell>
+                      <TableCell>{item.experience}</TableCell>
+                      <TableCell>{new Date(item.submittedAt).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">No feedback available</TableCell>
+                    <TableCell colSpan={4} className="text-center">No user feedback received yet.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

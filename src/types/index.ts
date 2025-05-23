@@ -25,6 +25,18 @@ export interface Booking {
   status: 'active' | 'completed' | 'cancelled';
 }
 
+// Feedback Types
+export interface Feedback {
+  id: string;
+  userId: string;
+  userName: string;
+  bookingId: string;
+  rating: string;
+  experience: string;
+  suggestions?: string;
+  submittedAt: string;
+}
+
 // Mock Data Functions
 export const generateMockSlots = (): ParkingSlot[] => {
   const slots: ParkingSlot[] = [];
@@ -105,4 +117,8 @@ export const generateMockBookings = (userId: string): Booking[] => {
   }
   
   return bookings;
+};
+
+export const generateMockFeedback = (): Feedback[] => {
+  return [];
 };
