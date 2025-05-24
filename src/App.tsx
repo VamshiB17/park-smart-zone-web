@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSlots from "./pages/AdminSlots";
 import AdminBookings from "./pages/AdminBookings";
 import Help from "./pages/Help";
+import QRScannerPage from "./pages/QRScanner";
 import NotFound from "./pages/NotFound";
 
 // Contexts
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/slots" element={<Slots />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/qr-scanner" element={<QRScannerPage />} />
               <Route path="/help" element={<Help />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/slots" element={<AdminSlots />} />
