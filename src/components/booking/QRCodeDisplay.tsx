@@ -12,7 +12,7 @@ interface QRCodeDisplayProps {
 export function QRCodeDisplay({ booking, showFlashlightToggle = false }: QRCodeDisplayProps) {
   const [flashlightOn, setFlashlightOn] = useState(false);
   
-  // Generate QR data from booking details with properly formatted times
+  // Generate QR data from booking details
   const generateQRData = (booking: Booking) => {
     return JSON.stringify({
       action: 'book',
@@ -20,8 +20,8 @@ export function QRCodeDisplay({ booking, showFlashlightToggle = false }: QRCodeD
       slotId: booking.slotId,
       slotName: booking.slotName,
       slotType: booking.slotType,
-      startTime: new Date(booking.startTime).toISOString(),
-      endTime: new Date(booking.endTime).toISOString(),
+      startTime: booking.startTime,
+      endTime: booking.endTime,
       userId: booking.userId,
       userName: booking.userName,
     });
