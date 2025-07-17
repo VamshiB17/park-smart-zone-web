@@ -10,12 +10,12 @@ import {
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { QRCodeDisplay } from '@/components/booking/QRCodeDisplay';
 import { Button } from '@/components/ui/button';
-import { Booking } from '@/types';
+import { BookingWithDetails } from '@/types';
 
 type BookingSuccessDialogProps = {
   open: boolean;
   onClose: () => void;
-  booking: Booking | null;
+  booking: BookingWithDetails | null;
 };
 
 export function BookingSuccessDialog({ open, onClose, booking }: BookingSuccessDialogProps) {

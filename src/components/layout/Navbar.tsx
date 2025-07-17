@@ -19,7 +19,7 @@ import { AlertTriangle, Car, HelpCircle, Menu, User, X } from 'lucide-react';
 
 export function Navbar() {
   const { currentUser, isAdmin, logout } = useAuth();
-  const { isOnline } = useParkingContext();
+  const { loading } = useParkingContext();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,10 +160,10 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center">
-            {!isOnline && (
+            {loading && (
               <div className="mr-4 flex items-center">
-                <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
-                <span className="text-sm text-red-500">Offline</span>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-1"></div>
+                <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
             )}
             

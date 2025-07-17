@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
-import { Booking } from '@/types';
+import { BookingWithDetails } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Car, Zap, QrCode } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { QRCodeDisplay } from './QRCodeDisplay';
 
 interface BookingListProps {
-  bookings: Booking[];
+  bookings: BookingWithDetails[];
   onCancel?: (bookingId: string) => void;
   isAdmin?: boolean;
 }
@@ -150,7 +150,7 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
                         className="mt-2"
                         onClick={() => handleBookFromQR(JSON.stringify({
                           action: 'book',
-                          slotId: booking.slotId,
+                          slotId: booking.slot_id,
                           startTime: booking.startTime,
                           endTime: booking.endTime,
                         }))}

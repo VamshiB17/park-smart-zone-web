@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import { Flashlight, FlashlightOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Booking } from '@/types';
+import { BookingWithDetails } from '@/types';
 
 interface QRCodeDisplayProps {
-  booking: Booking;
+  booking: BookingWithDetails;
   showFlashlightToggle?: boolean;
 }
 
@@ -13,16 +13,16 @@ export function QRCodeDisplay({ booking, showFlashlightToggle = false }: QRCodeD
   const [flashlightOn, setFlashlightOn] = useState(false);
   
   // Generate QR data from booking details
-  const generateQRData = (booking: Booking) => {
+  const generateQRData = (booking: BookingWithDetails) => {
     return JSON.stringify({
       action: 'book',
       bookingId: booking.id,
-      slotId: booking.slotId,
+      slotId: booking.slot_id,
       slotName: booking.slotName,
       slotType: booking.slotType,
       startTime: booking.startTime,
       endTime: booking.endTime,
-      userId: booking.userId,
+      userId: booking.user_id,
       userName: booking.userName,
     });
   };
