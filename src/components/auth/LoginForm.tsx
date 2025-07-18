@@ -19,12 +19,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface LoginFormProps {
+  onForgotPassword: () => void;
+}
+
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
-export function LoginForm() {
+export function LoginForm({ onForgotPassword }: LoginFormProps) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +109,16 @@ export function LoginForm() {
             </Button>
           </form>
         </Form>
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-sm text-primary hover:underline"
+            disabled={isLoading}
+          >
+            Forgot your password?
+          </button>
+        </div>
       </CardContent>
     </Card>
   );
