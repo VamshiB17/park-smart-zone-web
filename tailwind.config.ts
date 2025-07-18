@@ -64,11 +64,11 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				parking: {
-					available: 'hsl(142 71% 45%)', // green-500 in HSL
-					occupied: 'hsl(0 84% 60%)', // red-500 in HSL
-					electric: 'hsl(213 93% 68%)', // blue-400 in HSL
-					highlight: 'hsl(250 83% 75%)', // light purple in HSL
-					accent: 'hsl(220 14% 96%)', // gray-100 in HSL
+					available: '#22c55e', // green-500
+					occupied: '#ef4444', // red-500
+					electric: '#60a5fa', // blue-400
+					highlight: '#9b87f5', // light purple
+					accent: '#f3f4f6', // gray-100
 				}
 			},
 			borderRadius: {

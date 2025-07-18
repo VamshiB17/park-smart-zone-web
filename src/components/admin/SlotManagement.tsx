@@ -134,7 +134,7 @@ export function SlotManagement() {
   // Get booking details for occupied slots
   const getSlotBookingDetails = (slotId: string) => {
     const activeBooking = bookings.find(
-      booking => booking.slot_id === slotId && booking.status === 'active'
+      booking => booking.slotId === slotId && booking.status === 'active'
     );
     
     return activeBooking;
