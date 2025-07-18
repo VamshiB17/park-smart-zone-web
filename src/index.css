@@ -100,11 +100,11 @@
   }
   
   .parking-slot-available {
-    @apply bg-white border-parking-available text-parking-available hover:bg-parking-available/5;
+    @apply bg-card border-parking-available text-parking-available hover:bg-parking-available/5;
   }
   
   .parking-slot-occupied {
-    @apply bg-white border-parking-occupied text-parking-occupied cursor-not-allowed;
+    @apply bg-card border-parking-occupied text-parking-occupied cursor-not-allowed;
   }
   
   .parking-slot-electric {

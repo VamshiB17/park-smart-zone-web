@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext";
 import { ParkingProvider } from "./contexts/ParkingContext";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -34,13 +35,13 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/slots" element={<Slots />} />
-              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/slots" element={<ProtectedRoute><Slots /></ProtectedRoute>} />
+              <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
               <Route path="/help" element={<Help />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/slots" element={<AdminSlots />} />
-              <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/slots" element={<ProtectedRoute requireAdmin><AdminSlots /></ProtectedRoute>} />
+              <Route path="/admin/bookings" element={<ProtectedRoute requireAdmin><AdminBookings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

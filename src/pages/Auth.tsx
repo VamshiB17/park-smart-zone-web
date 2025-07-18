@@ -100,6 +100,12 @@ export default function Auth() {
                 <p className="text-xs text-muted-foreground">
                   Your account will be created and you'll receive an email confirmation.
                 </p>
+                
+                <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-md">
+                  <p className="text-xs font-medium text-primary mb-1">Demo Admin Credentials:</p>
+                  <p className="text-xs text-muted-foreground">Email: vamshimani2021@gmail.com</p>
+                  <p className="text-xs text-muted-foreground">Password: [Your existing password]</p>
+                </div>
               </div>
             </div>
           </div>
