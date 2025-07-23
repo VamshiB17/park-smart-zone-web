@@ -1,23 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFeedbackContext } from '@/contexts/FeedbackContext';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const feedbackSchema = z.object({
-  rating: z.enum(['1', '2', '3', '4', '5'], {
-    required_error: "Please select a rating",
-  }),
-  experience: z.string().min(1, "Please describe your experience").max(500, "Description too long"),
-  suggestions: z.string().optional(),
+  comment: z.string().optional(),
 });
 
 type FeedbackFormProps = {
@@ -25,24 +20,37 @@ type FeedbackFormProps = {
 };
 
 export function FeedbackForm({ onComplete }: FeedbackFormProps) {
+  const { submitFeedback } = useFeedbackContext();
+  const [rating, setRating] = useState<number>(0);
+  const [hoveredRating, setHoveredRating] = useState<number>(0);
+
   const form = useForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
-      rating: undefined,
-      experience: '',
-      suggestions: '',
+      comment: '',
     },
   });
 
-  function onSubmit(data: z.infer<typeof feedbackSchema>) {
-    // In a real app, this would send the feedback to a server
-    console.log('Feedback submitted:', data);
-    toast.success('Thank you for your feedback!');
-    
-    if (onComplete) {
-      onComplete();
+  const onSubmit = async (data: z.infer<typeof feedbackSchema>) => {
+    if (rating === 0) {
+      toast.error('Please select a rating');
+      return;
     }
-  }
+
+    try {
+      await submitFeedback(rating, data.comment);
+      
+      // Reset form
+      form.reset();
+      setRating(0);
+      
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      toast.error('Failed to submit feedback');
+    }
+  };
 
   return (
     <Card>
@@ -55,58 +63,37 @@ export function FeedbackForm({ onComplete }: FeedbackFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="rating"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Rating</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex space-x-4"
-                    >
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <div key={rating} className="flex flex-col items-center space-y-1">
-                          <RadioGroupItem value={String(rating)} id={`rating-${rating}`} />
-                          <Label htmlFor={`rating-${rating}`} className="text-xs">{rating}</Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="space-y-2">
+              <FormLabel>Rating</FormLabel>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-8 w-8 cursor-pointer transition-colors ${
+                      star <= (hoveredRating || rating)
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoveredRating(star)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                  />
+                ))}
+              </div>
+              {rating === 0 && (
+                <p className="text-sm text-muted-foreground">Click to rate your experience</p>
               )}
-            />
+            </div>
             
             <FormField
               control={form.control}
-              name="experience"
+              name="comment"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Describe your experience</FormLabel>
+                  <FormLabel>Comment (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="What did you like or dislike about your booking experience?"
-                      {...field}
-                      className="min-h-[100px]"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="suggestions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Suggestions for improvement</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="How can we make the booking process better?"
+                      placeholder="Tell us about your experience..."
                       {...field}
                       className="min-h-[100px]"
                     />
