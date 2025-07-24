@@ -1,10 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Auth() {
@@ -13,12 +11,18 @@ export default function Auth() {
   const navigate = useNavigate();
   
   // Redirect if already logged in
-  if (currentUser) {
-    if (currentUser.role === 'admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/dashboard');
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     }
+  }, [currentUser, navigate]);
+  
+  if (currentUser) {
+    return null; // Prevent flash while redirecting
   }
   
   return (
@@ -26,23 +30,23 @@ export default function Auth() {
       <div className="max-w-md mx-auto py-12">
         <h1 className="text-3xl font-bold text-center mb-8">Welcome to ParkSmart</h1>
         
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-card rounded-lg shadow-md overflow-hidden border">
           <div className="flex border-b">
             <button
-              className={`flex-1 py-4 font-medium ${
+              className={`flex-1 py-4 font-medium transition-colors ${
                 activeTab === 'login' 
-                  ? 'text-primary border-b-2 border-primary' 
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTab('login')}
             >
               Login
             </button>
             <button
-              className={`flex-1 py-4 font-medium ${
+              className={`flex-1 py-4 font-medium transition-colors ${
                 activeTab === 'signup' 
-                  ? 'text-primary border-b-2 border-primary' 
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => setActiveTab('signup')}
             >
@@ -53,13 +57,13 @@ export default function Auth() {
           <div className="p-6">
             {activeTab === 'login' ? <LoginForm /> : <SignupForm />}
             
-            <div className="mt-6 text-center text-sm text-gray-500">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               <p>
                 {activeTab === 'login' ? (
                   <>
                     Don't have an account?{' '}
                     <button 
-                      className="text-primary hover:underline"
+                      className="text-primary hover:underline font-medium"
                       onClick={() => setActiveTab('signup')}
                     >
                       Sign Up
@@ -69,7 +73,7 @@ export default function Auth() {
                   <>
                     Already have an account?{' '}
                     <button 
-                      className="text-primary hover:underline"
+                      className="text-primary hover:underline font-medium"
                       onClick={() => setActiveTab('login')}
                     >
                       Login
@@ -77,20 +81,6 @@ export default function Auth() {
                   </>
                 )}
               </p>
-              
-              <div className="mt-4">
-                <p className="mb-2">Demo Accounts:</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p>User: user@example.com</p>
-                    <p>Password: password123</p>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p>Admin: admin@example.com</p>
-                    <p>Password: admin123</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

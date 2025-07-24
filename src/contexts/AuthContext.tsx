@@ -16,7 +16,8 @@ export interface User {
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, selectedRole?: UserRole) => Promise<User>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   signup: (email: string, password: string, name: string) => Promise<User>;
   isAdmin: boolean;
@@ -57,10 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: profile.id,
               email: profile.email || session.user.email || '',
               name: profile.name || 'User',
-              role: profile.is_admin ? 'admin' : 'user'
+              role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
             };
             setCurrentUser(user);
-            setIsAdmin(profile.is_admin);
+            setIsAdmin(profile.role === 'admin' || profile.is_admin);
           }
         } else {
           setCurrentUser(null);
@@ -84,10 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 id: profile.id,
                 email: profile.email || session.user.email || '',
                 name: profile.name || 'User',
-                role: profile.is_admin ? 'admin' : 'user'
+                role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
               };
               setCurrentUser(user);
-              setIsAdmin(profile.is_admin);
+              setIsAdmin(profile.role === 'admin' || profile.is_admin);
             }
           });
       }
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<User> => {
+  const login = async (email: string, password: string, selectedRole?: UserRole): Promise<User> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -110,8 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Login failed');
     }
 
-    // The user will be set by the auth state change listener
-    // Return a temporary user object
+    // Fetch user profile to validate role
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('*')
@@ -122,14 +122,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('User profile not found');
     }
 
+    const userRole = (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole;
+
+    // Validate selected role against database role
+    if (selectedRole && selectedRole !== userRole) {
+      // Sign out the user before throwing error
+      await supabase.auth.signOut();
+      throw new Error(`You are not authorized to log in as ${selectedRole === 'admin' ? 'Admin' : 'User'}.`);
+    }
+
     const user: User = {
       id: profile.id,
       email: profile.email || data.user.email || '',
       name: profile.name || 'User',
-      role: profile.is_admin ? 'admin' : 'user'
+      role: userRole
     };
 
     return user;
+  };
+
+  const loginWithGoogle = async (): Promise<void> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   };
 
   const logout = async () => {
@@ -192,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     currentUser,
     login,
+    loginWithGoogle,
     logout,
     signup,
     isAdmin,
