@@ -3,15 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route } from "react-router-dom";
-
-// Contexts
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ParkingProvider } from "@/contexts/ParkingContext";
-import { FeedbackProvider } from "@/contexts/FeedbackContext";
-
-// Auth Components
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Pages
 import Index from "./pages/Index";
@@ -23,106 +15,40 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSlots from "./pages/AdminSlots";
 import AdminBookings from "./pages/AdminBookings";
 import Help from "./pages/Help";
-import Feedback from "./pages/Feedback";
 import QRScannerPage from "./pages/QRScanner";
 import NotFound from "./pages/NotFound";
+
+// Contexts
+import { AuthProvider } from "./contexts/AuthContext";
+import { ParkingProvider } from "./contexts/ParkingContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <ParkingProvider>
-          <FeedbackProvider>
-            <Toaster />
-            <Sonner />
+    <AuthProvider>
+      <ParkingProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              
-              {/* User Routes */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/slots" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Slots />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/bookings" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Bookings />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/feedback" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Feedback />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/qr-scanner" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <QRScannerPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/help" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Help />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Admin Routes */}
-              <Route 
-                path="/admin/dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/slots" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminSlots />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/bookings" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminBookings />
-                  </ProtectedRoute>
-                } 
-              />
-              
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/slots" element={<Slots />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/qr-scanner" element={<QRScannerPage />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/slots" element={<AdminSlots />} />
+              <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </FeedbackProvider>
-        </ParkingProvider>
-      </AuthProvider>
-    </TooltipProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ParkingProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

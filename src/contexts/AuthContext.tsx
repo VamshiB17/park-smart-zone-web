@@ -1,8 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { toast } from 'sonner';
 
 // Define user types
 export type UserRole = 'user' | 'admin';
@@ -14,14 +11,30 @@ export interface User {
   role: UserRole;
 }
 
+// Mock users for demo purposes
+const MOCK_USERS = [
+  {
+    id: '1',
+    email: 'user@example.com',
+    password: 'password123',
+    name: 'John Doe',
+    role: 'user' as UserRole,
+  },
+  {
+    id: '2',
+    email: 'admin@example.com',
+    password: 'admin123',
+    name: 'Admin User',
+    role: 'admin' as UserRole,
+  },
+];
+
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, password: string, selectedRole?: UserRole) => Promise<User>;
-  loginWithGoogle: () => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   signup: (email: string, password: string, name: string) => Promise<User>;
   isAdmin: boolean;
-  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,189 +49,78 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
+  // Check for saved user in localStorage on initial load
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        
-        if (session?.user) {
-          // Fetch user profile
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profile) {
-            const user: User = {
-              id: profile.id,
-              email: profile.email || session.user.email || '',
-              name: profile.name || 'User',
-              role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
-            };
-            setCurrentUser(user);
-            setIsAdmin(profile.role === 'admin' || profile.is_admin);
-          }
-        } else {
-          setCurrentUser(null);
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const user: User = {
-                id: profile.id,
-                email: profile.email || session.user.email || '',
-                name: profile.name || 'User',
-                role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
-              };
-              setCurrentUser(user);
-              setIsAdmin(profile.role === 'admin' || profile.is_admin);
-            }
-          });
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setIsAdmin(user.role === 'admin');
+    }
   }, []);
 
-  const login = async (email: string, password: string, selectedRole?: UserRole): Promise<User> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const login = async (email: string, password: string): Promise<User> => {
+    // In a real app, this would be an API call to your backend
+    const user = MOCK_USERS.find(
+      (u) => u.email === email && u.password === password
+    );
 
-    if (error) {
-      throw new Error(error.message);
+    if (!user) {
+      throw new Error('Invalid email or password');
     }
 
-    if (!data.user) {
-      throw new Error('Login failed');
-    }
-
-    // Fetch user profile to validate role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
-    if (!profile) {
-      throw new Error('User profile not found');
-    }
-
-    const userRole = (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole;
-
-    // Validate selected role against database role
-    if (selectedRole && selectedRole !== userRole) {
-      // Sign out the user before throwing error
-      await supabase.auth.signOut();
-      throw new Error(`You are not authorized to log in as ${selectedRole === 'admin' ? 'Admin' : 'User'}.`);
-    }
-
-    const user: User = {
-      id: profile.id,
-      email: profile.email || data.user.email || '',
-      name: profile.name || 'User',
-      role: userRole
-    };
-
-    return user;
+    const { password: _, ...userWithoutPassword } = user;
+    setCurrentUser(userWithoutPassword);
+    setIsAdmin(userWithoutPassword.role === 'admin');
+    
+    // Save user to localStorage
+    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+    
+    return userWithoutPassword;
   };
 
-  const loginWithGoogle = async (): Promise<void> => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`
-      }
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  };
-
-  const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Error signing out');
-    } else {
-      setCurrentUser(null);
-      setSession(null);
-      setIsAdmin(false);
-    }
+  const logout = () => {
+    setCurrentUser(null);
+    setIsAdmin(false);
+    localStorage.removeItem('currentUser');
   };
 
   const signup = async (email: string, password: string, name: string): Promise<User> => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
+    // Check if user already exists
+    const existingUser = MOCK_USERS.find((u) => u.email === email);
+    if (existingUser) {
+      throw new Error('User already exists with this email');
+    }
+
+    // Create a new user (in a real app, this would be an API call)
+    const newUser = {
+      id: `user-${Date.now()}`,
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name: name
-        }
-      }
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (!data.user) {
-      throw new Error('Signup failed');
-    }
-
-    // Create user profile
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        id: data.user.id,
-        name: name,
-        email: email,
-        is_admin: false
-      });
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-    }
-
-    const user: User = {
-      id: data.user.id,
-      email: email,
-      name: name,
-      role: 'user'
+      name,
+      role: 'user' as UserRole,
     };
 
-    return user;
+    // In a real app, we would save this user to a database
+    MOCK_USERS.push(newUser);
+
+    const { password: _, ...userWithoutPassword } = newUser;
+    setCurrentUser(userWithoutPassword);
+    
+    // Save user to localStorage
+    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+    
+    return userWithoutPassword;
   };
 
   const value = {
     currentUser,
     login,
-    loginWithGoogle,
     logout,
     signup,
     isAdmin,
-    session,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

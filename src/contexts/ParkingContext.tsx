@@ -1,9 +1,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ParkingSlot, Booking, SlotType, SlotStatus } from '@/types';
+import { ParkingSlot, Booking, SlotType, SlotStatus, generateMockSlots, generateMockBookings } from '@/types';
 import { useAuth } from './AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Shared database simulation
+const sharedDatabase = {
+  slots: generateMockSlots(),
+  bookings: [] as Booking[],
+};
 
 interface ParkingContextType {
   slots: ParkingSlot[];
@@ -37,30 +42,42 @@ export function useParkingContext() {
   return context;
 }
 
-// Convert database types to our interface
-const convertDbSlotToSlot = (dbSlot: any): ParkingSlot => ({
-  id: dbSlot.id,
-  name: dbSlot.name,
-  type: dbSlot.type as SlotType,
-  status: dbSlot.status as SlotStatus,
-  floor: dbSlot.floor,
-});
-
-const convertDbBookingToBooking = (dbBooking: any, userProfiles: any[]): Booking => {
-  const userProfile = userProfiles.find(p => p.id === dbBooking.user_id);
-  return {
-    id: dbBooking.id,
-    userId: dbBooking.user_id,
-    userName: userProfile?.name || 'Unknown User',
-    slotId: dbBooking.slot_id,
-    slotName: '', // Will be filled from slot data
-    slotType: 'normal', // Will be filled from slot data
-    startTime: new Date(dbBooking.start_time),
-    endTime: new Date(dbBooking.end_time),
-    createdAt: new Date(dbBooking.created_at),
-    status: dbBooking.status as 'active' | 'completed' | 'cancelled',
-  };
-};
+// Create a mock WebSocket for real-time updates simulation
+class MockWebSocket {
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: ((error: any) => void) | null = null;
+  
+  constructor(url: string) {
+    // Simulate connection established
+    setTimeout(() => {
+      if (this.onopen) this.onopen();
+    }, 500);
+    
+    // Set up periodic updates
+    setInterval(() => {
+      if (this.onmessage && Math.random() > 0.7) {
+        // Simulate receiving data
+        this.onmessage({
+          data: JSON.stringify({
+            type: 'update',
+            timestamp: new Date().toISOString()
+          })
+        });
+      }
+    }, 5000);
+  }
+  
+  send(data: string) {
+    // Simulate sending data
+    console.log('WebSocket sent:', data);
+  }
+  
+  close() {
+    if (this.onclose) this.onclose();
+  }
+}
 
 export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
@@ -68,6 +85,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [ws, setWs] = useState<MockWebSocket | null>(null);
   const [metrics, setMetrics] = useState({
     totalBookings: 0,
     activeBookings: 0,
@@ -76,27 +94,33 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     lastRefreshTime: null as Date | null,
   });
 
-  // Set up real-time subscriptions
+  // Initialize WebSocket connection
   useEffect(() => {
-    const slotsChannel = supabase
-      .channel('parking_slots_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_slots' }, () => {
-        console.log('Slots data changed');
-        refreshData();
-      })
-      .subscribe();
-
-    const bookingsChannel = supabase
-      .channel('bookings_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-        console.log('Bookings data changed');
-        refreshData();
-      })
-      .subscribe();
-
+    const mockWs = new MockWebSocket('wss://parksmart.example/realtime');
+    
+    mockWs.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+    
+    mockWs.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'update') {
+          refreshData();
+        }
+      } catch (e) {
+        console.error('Error parsing WebSocket message', e);
+      }
+    };
+    
+    mockWs.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+    
+    setWs(mockWs);
+    
     return () => {
-      supabase.removeChannel(slotsChannel);
-      supabase.removeChannel(bookingsChannel);
+      mockWs.close();
     };
   }, []);
   
@@ -131,72 +155,40 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Fetch data from Supabase
-  const refreshData = useCallback(async () => {
-    try {
-      // Fetch slots
-      const { data: slotsData, error: slotsError } = await supabase
-        .from('parking_slots')
-        .select('*')
-        .order('floor', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (slotsError) throw slotsError;
-
-      // Fetch bookings with user profiles
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          user_profiles!inner(name),
-          parking_slots!inner(name, type)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (bookingsError) throw bookingsError;
-
-      // Convert data
-      const convertedSlots = slotsData?.map(convertDbSlotToSlot) || [];
-      
-      const convertedBookings = bookingsData?.map((dbBooking: any): Booking => ({
-        id: dbBooking.id,
-        userId: dbBooking.user_id,
-        userName: dbBooking.user_profiles.name || 'Unknown User',
-        slotId: dbBooking.slot_id,
-        slotName: dbBooking.parking_slots.name,
-        slotType: dbBooking.parking_slots.type as SlotType,
-        startTime: new Date(dbBooking.start_time),
-        endTime: new Date(dbBooking.end_time),
-        createdAt: new Date(dbBooking.created_at),
-        status: dbBooking.status as 'active' | 'completed' | 'cancelled',
-      })) || [];
-
-      setSlots(convertedSlots);
-      setBookings(convertedBookings);
-      
-      if (currentUser) {
-        setUserBookings(convertedBookings.filter(booking => booking.userId === currentUser.id));
-      }
-      
-      // Update metrics
-      setMetrics({
-        totalBookings: convertedBookings.length,
-        activeBookings: convertedBookings.filter(b => b.status === 'active').length,
-        completedBookings: convertedBookings.filter(b => b.status === 'completed').length,
-        cancelledBookings: convertedBookings.filter(b => b.status === 'cancelled').length,
-        lastRefreshTime: new Date(),
-      });
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      toast.error('Failed to load data: ' + (error as Error).message);
+  // Initialize with shared database data
+  const refreshData = useCallback(() => {
+    setSlots([...sharedDatabase.slots]);
+    setBookings([...sharedDatabase.bookings]);
+    
+    if (currentUser) {
+      setUserBookings(sharedDatabase.bookings.filter(booking => booking.userId === currentUser.id));
     }
+    
+    // Update metrics
+    setMetrics({
+      totalBookings: sharedDatabase.bookings.length,
+      activeBookings: sharedDatabase.bookings.filter(b => b.status === 'active').length,
+      completedBookings: sharedDatabase.bookings.filter(b => b.status === 'completed').length,
+      cancelledBookings: sharedDatabase.bookings.filter(b => b.status === 'cancelled').length,
+      lastRefreshTime: new Date(),
+    });
   }, [currentUser]);
 
-  // Initialize data
+  // Initialize with mock data
   useEffect(() => {
-    if (currentUser) {
-      refreshData();
+    // Initialize shared database with mock bookings if empty
+    if (sharedDatabase.bookings.length === 0 && currentUser) {
+      sharedDatabase.bookings = generateMockBookings(currentUser.id);
     }
+    
+    refreshData();
+    
+    // Setup periodic refresh for real-time updates
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 3000);
+    
+    return () => clearInterval(intervalId);
   }, [currentUser, refreshData]);
 
   // Filter user bookings when currentUser changes
@@ -208,50 +200,36 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, bookings]);
 
-  const addSlot = useCallback(async (name: string, type: SlotType, floor: number) => {
-    try {
-      const { error } = await supabase
-        .from('parking_slots')
-        .insert({
-          name,
-          type,
-          status: 'available',
-          floor,
-        });
+  const addSlot = useCallback((name: string, type: SlotType, floor: number) => {
+    const newSlot: ParkingSlot = {
+      id: `slot-${Date.now()}`,
+      name,
+      type,
+      status: 'available' as SlotStatus,
+      floor,
+    };
+    
+    sharedDatabase.slots = [...sharedDatabase.slots, newSlot];
+    refreshData();
+    toast.success(`Added new ${type} parking slot: ${name}`);
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_added', slot: newSlot }));
+  }, [refreshData, ws]);
 
-      if (error) throw error;
+  const updateSlot = useCallback((id: string, updates: Partial<ParkingSlot>) => {
+    sharedDatabase.slots = sharedDatabase.slots.map(slot => 
+      slot.id === id ? { ...slot, ...updates } : slot
+    );
+    
+    refreshData();
+    toast.success(`Updated slot ${updates.name || id}`);
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_updated', slotId: id, updates }));
+  }, [refreshData, ws]);
 
-      toast.success(`Added new ${type} parking slot: ${name}`);
-      refreshData();
-    } catch (error) {
-      console.error('Error adding slot:', error);
-      toast.error('Failed to add slot: ' + (error as Error).message);
-    }
-  }, [refreshData]);
-
-  const updateSlot = useCallback(async (id: string, updates: Partial<ParkingSlot>) => {
-    try {
-      const { error } = await supabase
-        .from('parking_slots')
-        .update({
-          name: updates.name,
-          type: updates.type,
-          status: updates.status,
-          floor: updates.floor,
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success(`Updated slot ${updates.name || id}`);
-      refreshData();
-    } catch (error) {
-      console.error('Error updating slot:', error);
-      toast.error('Failed to update slot: ' + (error as Error).message);
-    }
-  }, [refreshData]);
-
-  const deleteSlot = useCallback(async (id: string) => {
+  const deleteSlot = useCallback((id: string) => {
     const slotToDelete = slots.find(slot => slot.id === id);
     if (!slotToDelete) return;
     
@@ -264,22 +242,14 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       toast.error("Cannot delete slot with active bookings");
       return;
     }
-
-    try {
-      const { error } = await supabase
-        .from('parking_slots')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success(`Deleted slot ${slotToDelete.name}`);
-      refreshData();
-    } catch (error) {
-      console.error('Error deleting slot:', error);
-      toast.error('Failed to delete slot: ' + (error as Error).message);
-    }
-  }, [slots, bookings, refreshData]);
+    
+    sharedDatabase.slots = sharedDatabase.slots.filter(slot => slot.id !== id);
+    refreshData();
+    toast.success(`Deleted slot ${slotToDelete.name}`);
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'slot_deleted', slotId: id }));
+  }, [slots, bookings, refreshData, ws]);
 
   const bookSlot = useCallback(async (slotId: string, startTime: Date, endTime: Date): Promise<Booking | undefined> => {
     if (!currentUser) {
@@ -299,75 +269,67 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
     
     // Check for time conflicts
-    const { data: conflictingBookings, error: conflictError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('slot_id', slotId)
-      .eq('status', 'active')
-      .or(`and(start_time.lte.${startTime.toISOString()},end_time.gt.${startTime.toISOString()}),and(start_time.lt.${endTime.toISOString()},end_time.gte.${endTime.toISOString()}),and(start_time.gte.${startTime.toISOString()},end_time.lte.${endTime.toISOString()})`);
+    const hasConflict = bookings.some(booking => {
+      if (booking.slotId !== slotId) return false;
+      if (booking.status !== 'active') return false;
+      
+      const bookingStart = new Date(booking.startTime);
+      const bookingEnd = new Date(booking.endTime);
+      
+      return (
+        (startTime >= bookingStart && startTime < bookingEnd) ||
+        (endTime > bookingStart && endTime <= bookingEnd) ||
+        (startTime <= bookingStart && endTime >= bookingEnd)
+      );
+    });
     
-    if (conflictError) {
-      console.error('Error checking conflicts:', conflictError);
-      toast.error('Error checking slot availability');
-      return;
-    }
-    
-    if (conflictingBookings && conflictingBookings.length > 0) {
+    if (hasConflict) {
       toast.error("This slot is already booked for the selected time");
       return;
     }
-
+    
+    // Create new booking
+    const newBooking: Booking = {
+      id: `booking-${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      slotId,
+      slotName: slot.name,
+      slotType: slot.type,
+      startTime,
+      endTime,
+      createdAt: new Date(),
+      status: 'active',
+    };
+    
+    // Add booking to database
+    sharedDatabase.bookings = [...sharedDatabase.bookings, newBooking];
+    
+    // Immediately update slot status to occupied when booked
+    // This ensures it shows as booked in all views right away
+    sharedDatabase.slots = sharedDatabase.slots.map(s => 
+      s.id === slotId ? { ...s, status: 'occupied' as SlotStatus } : s
+    );
+    
+    refreshData();
+    toast.success(`Successfully booked slot ${slot.name}`);
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'booking_created', booking: newBooking }));
+    
+    // For offline support, store in local storage
     try {
-      // Create booking
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: currentUser.id,
-          slot_id: slotId,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (bookingError) throw bookingError;
-
-      // Update slot status to occupied
-      const { error: updateError } = await supabase
-        .from('parking_slots')
-        .update({ status: 'occupied' })
-        .eq('id', slotId);
-
-      if (updateError) {
-        console.error('Error updating slot status:', updateError);
-      }
-
-      const newBooking: Booking = {
-        id: bookingData.id,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        slotId,
-        slotName: slot.name,
-        slotType: slot.type,
-        startTime,
-        endTime,
-        createdAt: new Date(bookingData.created_at),
-        status: 'active',
-      };
-
-      toast.success(`Successfully booked slot ${slot.name}`);
-      refreshData();
-
-      return newBooking;
-    } catch (error) {
-      console.error('Error booking slot:', error);
-      toast.error('Failed to book slot: ' + (error as Error).message);
-      return undefined;
+      const offlineBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+      offlineBookings.push(newBooking);
+      localStorage.setItem('userBookings', JSON.stringify(offlineBookings));
+    } catch (err) {
+      console.error('Error saving booking to local storage', err);
     }
-  }, [currentUser, slots, refreshData]);
+    
+    return newBooking;
+  }, [currentUser, slots, bookings, refreshData, ws]);
 
-  const cancelBooking = useCallback(async (bookingId: string) => {
+  const cancelBooking = useCallback((bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking) {
       toast.error("Booking not found");
@@ -378,33 +340,37 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       toast.error("Only active bookings can be cancelled");
       return;
     }
-
-    try {
-      // Update booking status
-      const { error: bookingError } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', bookingId);
-
-      if (bookingError) throw bookingError;
-
-      // Update slot status back to available
-      const { error: slotError } = await supabase
-        .from('parking_slots')
-        .update({ status: 'available' })
-        .eq('id', booking.slotId);
-
-      if (slotError) {
-        console.error('Error updating slot status:', slotError);
-      }
-
-      toast.success("Booking cancelled successfully");
-      refreshData();
-    } catch (error) {
-      console.error('Error cancelling booking:', error);
-      toast.error('Failed to cancel booking: ' + (error as Error).message);
+    
+    // Update booking status
+    sharedDatabase.bookings = sharedDatabase.bookings.map(b => 
+      b.id === bookingId ? { ...b, status: 'cancelled' } : b
+    );
+    
+    // Update slot status back to available
+    const slotToUpdate = sharedDatabase.slots.find(s => s.id === booking.slotId);
+    if (slotToUpdate) {
+      sharedDatabase.slots = sharedDatabase.slots.map(s => 
+        s.id === booking.slotId ? { ...s, status: 'available' as SlotStatus } : s
+      );
     }
-  }, [bookings, refreshData]);
+    
+    refreshData();
+    toast.success("Booking cancelled successfully");
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'booking_cancelled', bookingId }));
+    
+    // Update offline storage
+    try {
+      let offlineBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+      offlineBookings = offlineBookings.map((b: Booking) => 
+        b.id === bookingId ? { ...b, status: 'cancelled' } : b
+      );
+      localStorage.setItem('userBookings', JSON.stringify(offlineBookings));
+    } catch (err) {
+      console.error('Error updating local storage', err);
+    }
+  }, [bookings, refreshData, ws]);
 
   const getSlotById = useCallback((slotId: string) => {
     return slots.find(slot => slot.id === slotId);
