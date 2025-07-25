@@ -169,14 +169,21 @@ export function LoginForm() {
           <p className="mb-2">Demo Accounts:</p>
           <div className="grid grid-cols-1 gap-2 text-xs">
             <div className="bg-muted p-2 rounded">
-              <p>User: user@example.com</p>
+              <p className="font-medium">User Account:</p>
+              <p>Email: user@example.com</p>
               <p>Password: password123</p>
+              <p>Role: User</p>
             </div>
             <div className="bg-muted p-2 rounded">
-              <p>Admin: admin@example.com</p>
+              <p className="font-medium">Admin Account:</p>
+              <p>Email: admin@example.com</p>
               <p>Password: admin123</p>
+              <p>Role: Admin</p>
             </div>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Note: If these accounts don't exist, please sign up first.
+          </p>
         </div>
       </CardContent>
     </Card>
