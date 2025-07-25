@@ -98,47 +98,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string, selectedRole?: UserRole): Promise<User> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    if (!data.user) {
-      throw new Error('Login failed');
-    }
+      if (!data.user) {
+        throw new Error('Login failed');
+      }
 
-    // Fetch user profile to validate role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+      // Fetch user profile to validate role
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
 
-    if (!profile) {
-      throw new Error('User profile not found');
-    }
+      if (profileError || !profile) {
+        throw new Error('User profile not found. Please contact support.');
+      }
 
-    const userRole = (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole;
+      const userRole = (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole;
 
-    // Validate selected role against database role
-    if (selectedRole && selectedRole !== userRole) {
-      // Sign out the user before throwing error
+      // Validate selected role against database role
+      if (selectedRole && selectedRole !== userRole) {
+        // Sign out the user before throwing error
+        await supabase.auth.signOut();
+        throw new Error(`You are not authorized to log in as ${selectedRole === 'admin' ? 'Admin' : 'User'}.`);
+      }
+
+      const user: User = {
+        id: profile.id,
+        email: profile.email || data.user.email || '',
+        name: profile.name || 'User',
+        role: userRole
+      };
+
+      return user;
+    } catch (error) {
+      // Ensure user is signed out on any error
       await supabase.auth.signOut();
-      throw new Error(`You are not authorized to log in as ${selectedRole === 'admin' ? 'Admin' : 'User'}.`);
+      throw error;
     }
-
-    const user: User = {
-      id: profile.id,
-      email: profile.email || data.user.email || '',
-      name: profile.name || 'User',
-      role: userRole
-    };
-
-    return user;
   };
 
   const loginWithGoogle = async (): Promise<void> => {

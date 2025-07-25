@@ -43,6 +43,14 @@ const App = () => (
               
               {/* User Routes */}
               <Route 
+                path="/user-dashboard" 
+                element={
+                  <ProtectedRoute requiredRole="user">
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/dashboard" 
                 element={
                   <ProtectedRoute requiredRole="user">
@@ -92,6 +100,14 @@ const App = () => (
               />
               
               {/* Admin Routes */}
+              <Route 
+                path="/admin-dashboard" 
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/admin/dashboard" 
                 element={

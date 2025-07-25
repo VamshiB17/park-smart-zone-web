@@ -53,9 +53,9 @@ export function LoginForm() {
       toast.success(`Welcome back, ${user.name}!`);
       
       if (user.role === 'admin') {
-        navigate('/admin/dashboard');
+        navigate('/admin-dashboard');
       } else {
-        navigate('/dashboard');
+        navigate('/user-dashboard');
       }
     } catch (error) {
       toast.error((error as Error).message || 'Login failed');
