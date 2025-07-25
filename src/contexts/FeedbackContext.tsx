@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './AuthContext';
+import { AuthContext, type AuthContextType } from './AuthContext';
 import { toast } from 'sonner';
 
 export interface Feedback {
@@ -31,7 +31,8 @@ export function useFeedbackContext() {
 }
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
+  const authContext = useContext(AuthContext) as AuthContextType | null;
+  const currentUser = authContext?.currentUser || null;
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [userFeedbacks, setUserFeedbacks] = useState<Feedback[]>([]);
 

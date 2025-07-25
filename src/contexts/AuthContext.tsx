@@ -14,7 +14,7 @@ export interface User {
   role: UserRole;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   currentUser: User | null;
   login: (email: string, password: string, selectedRole?: UserRole) => Promise<User>;
   loginWithGoogle: () => Promise<void>;
@@ -24,7 +24,7 @@ interface AuthContextType {
   session: Session | null;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
   const context = useContext(AuthContext);
