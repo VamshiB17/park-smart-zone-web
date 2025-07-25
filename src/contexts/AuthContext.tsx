@@ -187,19 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Signup failed');
     }
 
-    // Create user profile
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        id: data.user.id,
-        name: name,
-        email: email,
-        is_admin: false
-      });
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-    }
+    // The trigger will automatically create the user profile
+    // Wait a moment for the trigger to execute
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const user: User = {
       id: data.user.id,

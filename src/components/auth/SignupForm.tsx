@@ -48,8 +48,9 @@ export function SignupForm() {
     setIsLoading(true);
     try {
       await signup(values.email, values.password, values.name);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+      toast.success('Account created successfully! Please log in with your credentials.');
+      // Redirect to login page after successful signup
+      navigate('/auth');
     } catch (error) {
       toast.error((error as Error).message || 'Signup failed');
     } finally {

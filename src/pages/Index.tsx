@@ -94,9 +94,6 @@ export default function Index() {
             <Button size="lg" variant="secondary" onClick={() => navigate('/auth')}>
               <User className="mr-2 h-4 w-4" /> Sign Up Now
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/admin/dashboard')} className="border-white text-slate-950">
-              Admin Login
-            </Button>
           </div>
         </div>
       </section>

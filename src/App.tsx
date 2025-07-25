@@ -66,14 +66,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="/feedback" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Feedback />
-                  </ProtectedRoute>
-                } 
-              />
+               <Route 
+                 path="/feedback" 
+                 element={
+                   <ProtectedRoute>
+                     <Feedback />
+                   </ProtectedRoute>
+                 } 
+               />
               <Route 
                 path="/qr-scanner" 
                 element={
