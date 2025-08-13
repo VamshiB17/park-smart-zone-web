@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ParkingSlot, Booking, SlotType, SlotStatus } from '@/types';
-import { useAuth } from './AuthContext';
+import { AuthContext } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -63,7 +63,15 @@ const convertDbBookingToBooking = (dbBooking: any, userProfiles: any[]): Booking
 };
 
 export function ParkingProvider({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
+  // Safely access auth context with proper error handling
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    // Return a minimal provider during auth initialization
+    console.warn('ParkingProvider: AuthContext not available yet, waiting...');
+    return <>{children}</>;
+  }
+  const currentUser = authContext.currentUser;
+  
   const [slots, setSlots] = useState<ParkingSlot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);

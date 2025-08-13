@@ -64,14 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAdmin(profile.role === 'admin' || profile.is_admin);
 
             // Handle role-based redirection for OAuth (Google) login
-              if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
+            if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
+              // Use a longer delay to ensure proper auth state setup
               setTimeout(() => {
                 if (user.role === 'admin') {
                   window.location.href = '/admin/dashboard';
                 } else {
                   window.location.href = '/dashboard';
                 }
-              }, 100);
+              }, 500); // Increased from 100ms to 500ms
             }
           }
         } else {
