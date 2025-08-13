@@ -54,13 +54,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_bookings_parking_slots"
-            columns: ["slot_id"]
-            isOneToOne: false
-            referencedRelation: "parking_slots"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_bookings_user_profiles"
             columns: ["user_id"]
             isOneToOne: false
