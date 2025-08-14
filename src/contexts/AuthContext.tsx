@@ -39,74 +39,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
+  const fetchUserProfile = async (userId: string, session: Session): Promise<User | null> => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Profile fetch error:', error);
+        toast.error('Failed to load user profile. Please try again.');
+        return null;
+      }
+      
+      if (profile) {
+        const user: User = {
+          id: profile.id,
+          email: profile.email || session.user.email || '',
+          name: profile.name || 'User',
+          role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
+        };
+        return user;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      toast.error('Failed to load user profile. Please try again.');
+      return null;
+    }
+  };
+
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profile) {
-            const user: User = {
-              id: profile.id,
-              email: profile.email || session.user.email || '',
-              name: profile.name || 'User',
-              role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
-            };
+          const user = await fetchUserProfile(session.user.id, session);
+          if (user && isMounted) {
             setCurrentUser(user);
-            setIsAdmin(profile.role === 'admin' || profile.is_admin);
+            setIsAdmin(user.role === 'admin');
 
             // Handle role-based redirection for OAuth (Google) login
             if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
-              // Use a longer delay to ensure proper auth state setup
-              setTimeout(() => {
-                if (user.role === 'admin') {
-                  window.location.href = '/admin/dashboard';
-                } else {
-                  window.location.href = '/dashboard';
-                }
-              }, 500); // Increased from 100ms to 500ms
+              if (user.role === 'admin') {
+                window.location.href = '/admin/dashboard';
+              } else {
+                window.location.href = '/dashboard';
+              }
             }
           }
         } else {
-          setCurrentUser(null);
-          setIsAdmin(false);
+          if (isMounted) {
+            setCurrentUser(null);
+            setIsAdmin(false);
+          }
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+      
       if (session?.user) {
-        supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const user: User = {
-                id: profile.id,
-                email: profile.email || session.user.email || '',
-                name: profile.name || 'User',
-                role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
-              };
-              setCurrentUser(user);
-              setIsAdmin(profile.role === 'admin' || profile.is_admin);
-            }
-          });
+        const user = await fetchUserProfile(session.user.id, session);
+        if (user && isMounted) {
+          setCurrentUser(user);
+          setIsAdmin(user.role === 'admin');
+          setSession(session);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string, selectedRole?: UserRole): Promise<User> => {
@@ -163,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://fjpmgsdggnrwccclqmdo.supabase.co/auth/v1/callback'
+        redirectTo: `${window.location.origin}/auth/callback`
       }
     });
 
@@ -184,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string, name: string): Promise<User> => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/auth/callback`;
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -205,15 +221,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Signup failed');
     }
 
-    // The trigger will automatically create the user profile
-    // Wait a moment for the trigger to execute
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Poll for profile creation instead of using fixed delay
+    let retries = 0;
+    const maxRetries = 10;
+    let profile = null;
+    
+    while (retries < maxRetries && !profile) {
+      try {
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileData) {
+          profile = profileData;
+          break;
+        }
+      } catch (error) {
+        // Profile not ready yet, wait and retry
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      retries++;
+    }
+
+    if (!profile) {
+      throw new Error('Account created but profile setup failed. Please try logging in.');
+    }
 
     const user: User = {
-      id: data.user.id,
-      email: email,
-      name: name,
-      role: 'user'
+      id: profile.id,
+      email: profile.email || email,
+      name: profile.name || name,
+      role: profile.role || 'user'
     };
 
     return user;
