@@ -41,11 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string, session: Session): Promise<User | null> => {
     try {
+      console.log('Fetching profile for user:', userId);
+      
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle missing data
       
       if (error) {
         console.error('Profile fetch error:', error);
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (profile) {
+        console.log('Profile found:', profile);
         const user: User = {
           id: profile.id,
           email: profile.email || session.user.email || '',
@@ -61,12 +64,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
         };
         return user;
+      } else {
+        console.log('No profile found for user:', userId);
+        // Create a basic user object from session data
+        const user: User = {
+          id: userId,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'User',
+          role: 'user'
+        };
+        return user;
       }
-      
-      return null;
     } catch (error) {
       console.error('Profile fetch error:', error);
-      toast.error('Failed to load user profile. Please try again.');
       return null;
     }
   };
@@ -79,16 +89,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!isMounted) return;
         
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         
         if (session?.user) {
           const user = await fetchUserProfile(session.user.id, session);
           if (user && isMounted) {
+            console.log('Setting current user:', user);
             setCurrentUser(user);
             setIsAdmin(user.role === 'admin');
 
-            // Handle role-based redirection for OAuth (Google) login
+            // Handle role-based redirection immediately after successful login
             if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
+              console.log('Redirecting user after login:', user.role);
               if (user.role === 'admin') {
                 window.location.href = '/admin/dashboard';
               } else {
@@ -98,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           if (isMounted) {
+            console.log('Clearing user session');
             setCurrentUser(null);
             setIsAdmin(false);
           }
@@ -109,9 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted) return;
       
+      console.log('Checking existing session:', session?.user?.id);
       if (session?.user) {
         const user = await fetchUserProfile(session.user.id, session);
         if (user && isMounted) {
+          console.log('Setting existing user:', user);
           setCurrentUser(user);
           setIsAdmin(user.role === 'admin');
           setSession(session);
