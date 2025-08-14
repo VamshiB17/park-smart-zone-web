@@ -43,15 +43,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId);
       
-      const { data: profile, error } = await supabase
+      // Create a promise with timeout
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to handle missing data
+        .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000);
+      });
+      
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
       
       if (error) {
         console.error('Profile fetch error:', error);
-        toast.error('Failed to load user profile. Please try again.');
+        if (error.message !== 'Profile fetch timeout') {
+          toast.error('Failed to load user profile. Please try again.');
+        }
         return null;
       }
       
@@ -63,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: profile.name || 'User',
           role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
         };
+        console.log('Returning user object:', user);
         return user;
       } else {
         console.log('No profile found for user:', userId);
@@ -73,11 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: session.user.user_metadata?.name || 'User',
           role: 'user'
         };
+        console.log('Returning fallback user object:', user);
         return user;
       }
     } catch (error) {
       console.error('Profile fetch error:', error);
-      return null;
+      // Return a fallback user instead of null to prevent getting stuck
+      const fallbackUser: User = {
+        id: userId,
+        email: session.user.email || '',
+        name: session.user.user_metadata?.name || 'User',
+        role: 'user'
+      };
+      console.log('Returning fallback user due to error:', fallbackUser);
+      return fallbackUser;
     }
   };
 
@@ -102,12 +121,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Handle role-based redirection immediately after successful login
             if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
               console.log('Redirecting user after login:', user.role);
-              if (user.role === 'admin') {
-                window.location.href = '/admin/dashboard';
-              } else {
-                window.location.href = '/dashboard';
-              }
+              // Use setTimeout to ensure state updates are complete
+              setTimeout(() => {
+                if (user.role === 'admin') {
+                  console.log('Redirecting to admin dashboard');
+                  window.location.href = '/admin/dashboard';
+                } else {
+                  console.log('Redirecting to user dashboard');
+                  window.location.href = '/dashboard';
+                }
+              }, 100);
             }
+          } else {
+            console.error('Failed to fetch user profile, signing out');
+            await supabase.auth.signOut();
           }
         } else {
           if (isMounted) {
