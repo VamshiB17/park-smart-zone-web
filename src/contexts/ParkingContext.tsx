@@ -157,7 +157,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
         .select(`
           *,
           user_profiles!inner(name),
-          parking_slots!inner(name, type)
+          parking_slots!bookings_slot_id_fkey(name, type)
         `)
         .order('created_at', { ascending: false });
 
