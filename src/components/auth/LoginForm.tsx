@@ -51,12 +51,7 @@ export function LoginForm() {
     try {
       const user = await login(values.email, values.password, values.role);
       toast.success(`Welcome back, ${user.name}!`);
-      
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      // Let AuthContext handle navigation via onAuthStateChange
     } catch (error) {
       toast.error((error as Error).message || 'Login failed');
     } finally {
