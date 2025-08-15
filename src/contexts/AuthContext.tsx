@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -39,29 +38,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const fetchUserProfile = async (userId: string, session: Session): Promise<User | null> => {
+  const fetchUserProfile = async (userId: string, session: Session): Promise<User> => {
     try {
       console.log('Fetching profile for user:', userId);
       
-      // Create a promise with timeout
-      const profilePromise = supabase
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
       
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000);
-      });
-      
-      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
-      
       if (error) {
         console.error('Profile fetch error:', error);
-        if (error.message !== 'Profile fetch timeout') {
-          toast.error('Failed to load user profile. Please try again.');
-        }
-        return null;
+        // Return fallback user on error
+        return {
+          id: userId,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'User',
+          role: 'user'
+        };
       }
       
       if (profile) {
@@ -89,14 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Profile fetch error:', error);
       // Return a fallback user instead of null to prevent getting stuck
-      const fallbackUser: User = {
+      return {
         id: userId,
         email: session.user.email || '',
         name: session.user.user_metadata?.name || 'User',
         role: 'user'
       };
-      console.log('Returning fallback user due to error:', fallbackUser);
-      return fallbackUser;
     }
   };
 
@@ -113,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           const user = await fetchUserProfile(session.user.id, session);
-          if (user && isMounted) {
+          if (isMounted) {
             console.log('Setting current user:', user);
             setCurrentUser(user);
             setIsAdmin(user.role === 'admin');
@@ -132,9 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }, 100);
             }
-          } else {
-            console.error('Failed to fetch user profile, signing out');
-            await supabase.auth.signOut();
           }
         } else {
           if (isMounted) {
@@ -153,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Checking existing session:', session?.user?.id);
       if (session?.user) {
         const user = await fetchUserProfile(session.user.id, session);
-        if (user && isMounted) {
+        if (isMounted) {
           console.log('Setting existing user:', user);
           setCurrentUser(user);
           setIsAdmin(user.role === 'admin');
@@ -188,9 +178,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_profiles')
         .select('*')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profile) {
+        console.error('Profile error during login:', profileError);
         throw new Error('User profile not found. Please contact support.');
       }
 
@@ -275,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('user_profiles')
           .select('*')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();
         
         if (profileData) {
           profile = profileData;
