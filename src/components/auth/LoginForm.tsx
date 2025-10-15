@@ -17,39 +17,31 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  role: z.enum(['user', 'admin'] as const, { required_error: 'Please select a role' }),
 });
 
 export function LoginForm() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: '',
-      role: 'user',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const user = await login(values.email, values.password, values.role);
+      // Determine role from email
+      const role = values.email === 'admin@example.com' ? 'admin' : 'user';
+      const user = await login(values.email, values.password, role);
       toast.success(`Welcome back, ${user.name}!`);
       // Let AuthContext handle navigation via onAuthStateChange
     } catch (error) {
@@ -59,16 +51,6 @@ export function LoginForm() {
     }
   }
 
-  async function handleGoogleLogin() {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      toast.success('Redirecting to Google...');
-    } catch (error) {
-      toast.error((error as Error).message || 'Google login failed');
-      setIsGoogleLoading(false);
-    }
-  }
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -78,27 +60,6 @@ export function LoginForm() {
       <CardContent className="space-y-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Login as</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="email"
@@ -141,39 +102,16 @@ export function LoginForm() {
           </form>
         </Form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
-        <Button
-          variant="outline"
-          type="button"
-          className="w-full"
-          onClick={handleGoogleLogin}
-          disabled={isGoogleLoading || isLoading}
-        >
-          {isGoogleLoading ? 'Redirecting...' : 'Continue with Google'}
-        </Button>
-
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+        <div className="mt-4 text-center text-sm text-muted-foreground">
           <p className="mb-2">Demo Accounts:</p>
           <div className="grid grid-cols-1 gap-2 text-xs">
-            <div className="bg-muted p-2 rounded">
-              <p className="font-medium">User Account:</p>
-              <p>Email: user@example.com</p>
-              <p>Password: password123</p>
-              <p>Role: User</p>
+            <div className="bg-muted p-3 rounded">
+              <p className="font-medium mb-1">User Account:</p>
+              <p>user@example.com / password123</p>
             </div>
-            <div className="bg-muted p-2 rounded">
-              <p className="font-medium">Admin Account:</p>
-              <p>Email: admin@example.com</p>
-              <p>Password: admin123</p>
-              <p>Role: Admin</p>
+            <div className="bg-muted p-3 rounded">
+              <p className="font-medium mb-1">Admin Account:</p>
+              <p>admin@example.com / admin123</p>
             </div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
