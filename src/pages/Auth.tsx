@@ -9,33 +9,16 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
-  const { currentUser, loading } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already logged in
-  React.useEffect(() => {
-    if (!loading && currentUser) {
-      if (currentUser.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
-    }
-  }, [currentUser, loading, navigate]);
-
-  if (loading) {
-    return (
-      <PageLayout>
-        <div className="max-w-md mx-auto py-12 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </PageLayout>
-    );
-  }
-
   if (currentUser) {
-    return null; // Will redirect via useEffect
+    if (currentUser.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   }
   
   return (
@@ -96,10 +79,17 @@ export default function Auth() {
               </p>
               
               <div className="mt-4">
-                <p className="mb-2">Create a new account to get started</p>
-                <p className="text-xs text-muted-foreground">
-                  Your account will be created and you'll receive an email confirmation.
-                </p>
+                <p className="mb-2">Demo Accounts:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p>User: user@example.com</p>
+                    <p>Password: password123</p>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded">
+                    <p>Admin: admin@example.com</p>
+                    <p>Password: admin123</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

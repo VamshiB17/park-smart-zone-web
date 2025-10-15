@@ -49,7 +49,6 @@ export function LoginForm() {
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Login error:', error);
       toast.error((error as Error).message || 'Login failed');
     } finally {
       setIsLoading(false);

@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function Dashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, userBookings, cancelBooking, refreshData, loading, metrics } = useParkingContext();
+  const { slots, userBookings, cancelBooking, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   const [firstVisit, setFirstVisit] = React.useState(false);
   
@@ -91,12 +91,13 @@ export default function Dashboard() {
           </Alert>
         )}
         
-        {/* Loading indicator */}
-        {loading && (
-          <Alert>
-            <AlertTitle>Loading...</AlertTitle>
+        {/* Offline Alert */}
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <AlertTitle>You're currently offline</AlertTitle>
             <AlertDescription>
-              Fetching latest parking data...
+              Limited functionality is available. Your active bookings are saved locally and will sync when you reconnect.
             </AlertDescription>
           </Alert>
         )}

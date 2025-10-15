@@ -30,7 +30,7 @@ import {
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, bookings, refreshData, loading, metrics } = useParkingContext();
+  const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
   const navigate = useNavigate();
   
   // Sample feedback data - in a real app this would come from your database
@@ -122,12 +122,14 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Loading indicator */}
-        {loading && (
-          <Alert>
-            <AlertTitle>Loading system data...</AlertTitle>
+        {/* Offline Alert */}
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <AlertTitle>System is offline</AlertTitle>
             <AlertDescription>
-              Fetching latest parking and booking information...
+              The parking management system is currently operating in offline mode. 
+              Some features may be limited until connectivity is restored.
             </AlertDescription>
           </Alert>
         )}

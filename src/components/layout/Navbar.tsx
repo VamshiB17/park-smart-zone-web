@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -15,11 +14,11 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useParkingContext } from '@/contexts/ParkingContext';
-import { AlertTriangle, Car, HelpCircle, Menu, User, X } from 'lucide-react';
+import { AlertTriangle, Car, HelpCircle, Menu, User, X, QrCode } from 'lucide-react';
 
 export function Navbar() {
   const { currentUser, isAdmin, logout } = useAuth();
-  const { loading } = useParkingContext();
+  const { isOnline } = useParkingContext();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,6 +91,19 @@ export function Navbar() {
                         
                         <NavigationMenuItem>
                           <Link 
+                            to="/qr-scanner"
+                            className={cn(
+                              navigationMenuTriggerStyle(),
+                              isActive('/qr-scanner') && 'bg-accent text-accent-foreground'
+                            )}
+                          >
+                            <QrCode className="h-4 w-4 mr-1" />
+                            QR Scanner
+                          </Link>
+                        </NavigationMenuItem>
+                        
+                        <NavigationMenuItem>
+                          <Link 
                             to="/help"
                             className={cn(
                               navigationMenuTriggerStyle(),
@@ -149,6 +161,20 @@ export function Navbar() {
                                 </Link>
                               </NavigationMenuLink>
                             </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link 
+                                  to="/qr-scanner" 
+                                  className={cn(
+                                    "block p-2 rounded hover:bg-accent flex items-center",
+                                    isActive('/qr-scanner') && 'bg-accent'
+                                  )}
+                                >
+                                  <QrCode className="h-4 w-4 mr-2" />
+                                  QR Scanner
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
@@ -160,10 +186,10 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center">
-            {loading && (
+            {!isOnline && (
               <div className="mr-4 flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-1"></div>
-                <span className="text-sm text-muted-foreground">Loading...</span>
+                <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
+                <span className="text-sm text-red-500">Offline</span>
               </div>
             )}
             
@@ -215,6 +241,10 @@ export function Navbar() {
                         <DropdownMenuItem onClick={() => navigate('/bookings')}>
                           My Bookings
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/qr-scanner')}>
+                          <QrCode className="h-4 w-4 mr-2" />
+                          QR Scanner
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/help')}>
                           Help Center
                         </DropdownMenuItem>
@@ -231,6 +261,10 @@ export function Navbar() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/admin/bookings')}>
                           All Bookings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/qr-scanner')}>
+                          <QrCode className="h-4 w-4 mr-2" />
+                          QR Scanner
                         </DropdownMenuItem>
                       </>
                     )}
@@ -286,6 +320,17 @@ export function Navbar() {
                   My Bookings
                 </Link>
                 <Link 
+                  to="/qr-scanner" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium flex items-center",
+                    isActive('/qr-scanner') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Scanner
+                </Link>
+                <Link 
                   to="/help" 
                   className={cn(
                     "px-3 py-2 rounded-md text-sm font-medium flex items-center",
@@ -333,6 +378,17 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   All Bookings
+                </Link>
+                <Link 
+                  to="/qr-scanner" 
+                  className={cn(
+                    "px-3 py-2 rounded-md text-sm font-medium flex items-center",
+                    isActive('/qr-scanner') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Scanner
                 </Link>
               </>
             )}

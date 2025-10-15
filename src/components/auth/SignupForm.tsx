@@ -47,11 +47,10 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const user = await signup(values.email, values.password, values.name);
-      toast.success(`Welcome to ParkSmart, ${user.name}! Please check your email to verify your account.`);
+      await signup(values.email, values.password, values.name);
+      toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Signup error:', error);
       toast.error((error as Error).message || 'Signup failed');
     } finally {
       setIsLoading(false);
