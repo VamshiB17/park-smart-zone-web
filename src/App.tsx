@@ -44,96 +44,19 @@ const App = () => (
               <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* User Routes */}
-              <Route 
-                path="/user-dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/slots" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Slots />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/bookings" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Bookings />
-                  </ProtectedRoute>
-                } 
-              />
-               <Route 
-                 path="/feedback" 
-                 element={
-                   <ProtectedRoute>
-                     <Feedback />
-                   </ProtectedRoute>
-                 } 
-               />
-              <Route 
-                path="/qr-scanner" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <QRScannerPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/help" 
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <Help />
-                  </ProtectedRoute>
-                } 
-              />
+              <Route path="/user-dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/slots" element={<Slots />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/qr-scanner" element={<QRScannerPage />} />
+              <Route path="/help" element={<Help />} />
               
               {/* Admin Routes */}
-              <Route 
-                path="/admin-dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/dashboard" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/slots" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminSlots />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/bookings" 
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminBookings />
-                  </ProtectedRoute>
-                } 
-              />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/slots" element={<AdminSlots />} />
+              <Route path="/admin/bookings" element={<AdminBookings />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
