@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -14,11 +15,11 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useParkingContext } from '@/contexts/ParkingContext';
-import { AlertTriangle, Car, HelpCircle, Menu, User, X, QrCode } from 'lucide-react';
+import { AlertTriangle, Car, HelpCircle, Menu, User, X } from 'lucide-react';
 
 export function Navbar() {
   const { currentUser, isAdmin, logout } = useAuth();
-  const { isOnline } = useParkingContext();
+  const { loading } = useParkingContext();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -91,41 +92,16 @@ export function Navbar() {
                         
                         <NavigationMenuItem>
                           <Link 
-                            to="/qr-scanner"
+                            to="/help"
                             className={cn(
                               navigationMenuTriggerStyle(),
-                              isActive('/qr-scanner') && 'bg-accent text-accent-foreground'
+                              isActive('/help') && 'bg-accent text-accent-foreground'
                             )}
                           >
-                            <QrCode className="h-4 w-4 mr-1" />
-                            QR Scanner
+                            <HelpCircle className="h-4 w-4 mr-1" />
+                            Help
                           </Link>
                         </NavigationMenuItem>
-                        
-                         <NavigationMenuItem>
-                           <Link 
-                             to="/feedback"
-                             className={cn(
-                               navigationMenuTriggerStyle(),
-                               isActive('/feedback') && 'bg-accent text-accent-foreground'
-                             )}
-                           >
-                             Feedback
-                           </Link>
-                         </NavigationMenuItem>
-                         
-                         <NavigationMenuItem>
-                           <Link 
-                             to="/help"
-                             className={cn(
-                               navigationMenuTriggerStyle(),
-                               isActive('/help') && 'bg-accent text-accent-foreground'
-                             )}
-                           >
-                             <HelpCircle className="h-4 w-4 mr-1" />
-                             Help
-                           </Link>
-                         </NavigationMenuItem>
                       </>
                     )}
                     
@@ -173,33 +149,6 @@ export function Navbar() {
                                 </Link>
                               </NavigationMenuLink>
                             </li>
-                             <li>
-                               <NavigationMenuLink asChild>
-                                 <Link 
-                                   to="/feedback" 
-                                   className={cn(
-                                     "block p-2 rounded hover:bg-accent",
-                                     isActive('/feedback') && 'bg-accent'
-                                   )}
-                                 >
-                                   Feedback
-                                 </Link>
-                               </NavigationMenuLink>
-                             </li>
-                             <li>
-                               <NavigationMenuLink asChild>
-                                 <Link 
-                                   to="/qr-scanner" 
-                                   className={cn(
-                                     "block p-2 rounded hover:bg-accent flex items-center",
-                                     isActive('/qr-scanner') && 'bg-accent'
-                                   )}
-                                 >
-                                   <QrCode className="h-4 w-4 mr-2" />
-                                   QR Scanner
-                                 </Link>
-                               </NavigationMenuLink>
-                             </li>
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
@@ -211,10 +160,10 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center">
-            {!isOnline && (
+            {loading && (
               <div className="mr-4 flex items-center">
-                <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
-                <span className="text-sm text-red-500">Offline</span>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-1"></div>
+                <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
             )}
             
@@ -266,13 +215,6 @@ export function Navbar() {
                         <DropdownMenuItem onClick={() => navigate('/bookings')}>
                           My Bookings
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/feedback')}>
-                          Feedback
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/qr-scanner')}>
-                          <QrCode className="h-4 w-4 mr-2" />
-                          QR Scanner
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/help')}>
                           Help Center
                         </DropdownMenuItem>
@@ -289,13 +231,6 @@ export function Navbar() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/admin/bookings')}>
                           All Bookings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/feedback')}>
-                          Feedback
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/qr-scanner')}>
-                          <QrCode className="h-4 w-4 mr-2" />
-                          QR Scanner
                         </DropdownMenuItem>
                       </>
                     )}
@@ -351,27 +286,6 @@ export function Navbar() {
                   My Bookings
                 </Link>
                 <Link 
-                  to="/feedback" 
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium",
-                    isActive('/feedback') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Feedback
-                </Link>
-                <Link 
-                  to="/qr-scanner" 
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium flex items-center",
-                    isActive('/qr-scanner') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  QR Scanner
-                </Link>
-                <Link 
                   to="/help" 
                   className={cn(
                     "px-3 py-2 rounded-md text-sm font-medium flex items-center",
@@ -419,27 +333,6 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   All Bookings
-                </Link>
-                <Link 
-                  to="/feedback" 
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium",
-                    isActive('/feedback') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Feedback
-                </Link>
-                <Link 
-                  to="/qr-scanner" 
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium flex items-center",
-                    isActive('/qr-scanner') ? "bg-blue-100 text-blue-800" : "text-gray-700 hover:bg-gray-100"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  QR Scanner
                 </Link>
               </>
             )}

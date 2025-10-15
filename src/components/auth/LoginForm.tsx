@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -5,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -39,25 +40,28 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      // Determine role from email
-      const role = values.email === 'admin@example.com' ? 'admin' : 'user';
-      const user = await login(values.email, values.password, role);
+      const user = await login(values.email, values.password);
       toast.success(`Welcome back, ${user.name}!`);
-      // Let AuthContext handle navigation via onAuthStateChange
+      
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error((error as Error).message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   }
 
-
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl text-center">Login</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -101,23 +105,6 @@ export function LoginForm() {
             </Button>
           </form>
         </Form>
-
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p className="mb-2">Demo Accounts:</p>
-          <div className="grid grid-cols-1 gap-2 text-xs">
-            <div className="bg-muted p-3 rounded">
-              <p className="font-medium mb-1">User Account:</p>
-              <p>user@example.com / password123</p>
-            </div>
-            <div className="bg-muted p-3 rounded">
-              <p className="font-medium mb-1">Admin Account:</p>
-              <p>admin@example.com / admin123</p>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Note: If these accounts don't exist, please sign up first.
-          </p>
-        </div>
       </CardContent>
     </Card>
   );

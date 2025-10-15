@@ -1,23 +1,23 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ParkingSlot, Booking, SlotType, SlotStatus } from '@/types';
-import { AuthContext } from './AuthContext';
+import { ParkingSlot, Booking, BookingWithDetails, SlotType, SlotStatus, BookingStatus } from '@/types';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ParkingContextType {
   slots: ParkingSlot[];
-  bookings: Booking[];
-  userBookings: Booking[];
+  bookings: BookingWithDetails[];
+  userBookings: BookingWithDetails[];
   addSlot: (name: string, type: SlotType, floor: number) => void;
   updateSlot: (id: string, updates: Partial<ParkingSlot>) => void;
   deleteSlot: (id: string) => void;
-  bookSlot: (slotId: string, startTime: Date, endTime: Date) => Promise<Booking | undefined>;
+  bookSlot: (slotId: string, startTime: Date, endTime: Date) => Promise<BookingWithDetails | undefined>;
   cancelBooking: (bookingId: string) => void;
   getSlotById: (slotId: string) => ParkingSlot | undefined;
   getAvailableSlots: (date: Date) => ParkingSlot[];
   refreshData: () => void;
-  isOnline: boolean;
+  loading: boolean;
   metrics: {
     totalBookings: number;
     activeBookings: number;
@@ -37,45 +37,12 @@ export function useParkingContext() {
   return context;
 }
 
-// Convert database types to our interface
-const convertDbSlotToSlot = (dbSlot: any): ParkingSlot => ({
-  id: dbSlot.id,
-  name: dbSlot.name,
-  type: dbSlot.type as SlotType,
-  status: dbSlot.status as SlotStatus,
-  floor: dbSlot.floor,
-});
-
-const convertDbBookingToBooking = (dbBooking: any, userProfiles: any[]): Booking => {
-  const userProfile = userProfiles.find(p => p.id === dbBooking.user_id);
-  return {
-    id: dbBooking.id,
-    userId: dbBooking.user_id,
-    userName: userProfile?.name || 'Unknown User',
-    slotId: dbBooking.slot_id,
-    slotName: '', // Will be filled from slot data
-    slotType: 'normal', // Will be filled from slot data
-    startTime: new Date(dbBooking.start_time),
-    endTime: new Date(dbBooking.end_time),
-    createdAt: new Date(dbBooking.created_at),
-    status: dbBooking.status as 'active' | 'completed' | 'cancelled',
-  };
-};
-
 export function ParkingProvider({ children }: { children: React.ReactNode }) {
-  // Safely access auth context with proper error handling
-  const authContext = useContext(AuthContext);
-  if (!authContext) {
-    // Return a minimal provider during auth initialization
-    console.warn('ParkingProvider: AuthContext not available yet, waiting...');
-    return <>{children}</>;
-  }
-  const currentUser = authContext.currentUser;
-  
+  const { currentUser, loading: authLoading } = useAuth();
   const [slots, setSlots] = useState<ParkingSlot[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [userBookings, setUserBookings] = useState<Booking[]>([]);
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
+  const [userBookings, setUserBookings] = useState<BookingWithDetails[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [metrics, setMetrics] = useState({
     totalBookings: 0,
     activeBookings: 0,
@@ -84,64 +51,26 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     lastRefreshTime: null as Date | null,
   });
 
-  // Set up real-time subscriptions
-  useEffect(() => {
-    const slotsChannel = supabase
-      .channel('parking_slots_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_slots' }, () => {
-        console.log('Slots data changed');
-        refreshData();
-      })
-      .subscribe();
-
-    const bookingsChannel = supabase
-      .channel('bookings_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-        console.log('Bookings data changed');
-        refreshData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(slotsChannel);
-      supabase.removeChannel(bookingsChannel);
-    };
-  }, []);
-  
-  // Handle online/offline events
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      toast.success("You're back online");
-      
-      // Sync any offline bookings
-      const offlineBookings = JSON.parse(localStorage.getItem('offlineBookings') || '[]');
-      if (offlineBookings.length > 0) {
-        toast.info(`Syncing ${offlineBookings.length} offline bookings...`);
-        // In a real app, this would send the offline bookings to the server
-      }
-      
-      // Refresh data
-      refreshData();
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      toast.error("You're offline. Limited functionality available.");
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+  // Helper function to convert booking to BookingWithDetails
+  const enrichBooking = useCallback((booking: Booking, slot?: ParkingSlot, userProfile?: any): BookingWithDetails => {
+    return {
+      ...booking,
+      userName: userProfile?.name || 'Unknown User',
+      slotName: slot?.name || 'Unknown Slot',
+      slotType: slot?.type || 'normal',
+      startTime: new Date(booking.start_time),
+      endTime: new Date(booking.end_time),
+      createdAt: new Date(booking.created_at),
     };
   }, []);
 
-  // Fetch data from Supabase
+  // Fetch all data from Supabase
   const refreshData = useCallback(async () => {
+    if (authLoading) return;
+
     try {
+      setLoading(true);
+
       // Fetch slots
       const { data: slotsData, error: slotsError } = await supabase
         .from('parking_slots')
@@ -156,116 +85,143 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
         .from('bookings')
         .select(`
           *,
-          user_profiles!inner(name),
-          parking_slots!bookings_slot_id_fkey(name, type)
+          user_profiles!inner(name, email)
         `)
         .order('created_at', { ascending: false });
 
       if (bookingsError) throw bookingsError;
 
-      // Convert data
-      const convertedSlots = slotsData?.map(convertDbSlotToSlot) || [];
-      
-      const convertedBookings = bookingsData?.map((dbBooking: any): Booking => ({
-        id: dbBooking.id,
-        userId: dbBooking.user_id,
-        userName: dbBooking.user_profiles.name || 'Unknown User',
-        slotId: dbBooking.slot_id,
-        slotName: dbBooking.parking_slots.name,
-        slotType: dbBooking.parking_slots.type as SlotType,
-        startTime: new Date(dbBooking.start_time),
-        endTime: new Date(dbBooking.end_time),
-        createdAt: new Date(dbBooking.created_at),
-        status: dbBooking.status as 'active' | 'completed' | 'cancelled',
-      })) || [];
+      setSlots((slotsData || []) as ParkingSlot[]);
 
-      setSlots(convertedSlots);
-      setBookings(convertedBookings);
-      
+      // Enrich bookings with slot and user data
+      const enrichedBookings = (bookingsData || []).map((booking: any) => {
+        const slot = (slotsData || []).find(s => s.id === booking.slot_id);
+        return enrichBooking(booking as Booking, slot as ParkingSlot, booking.user_profiles);
+      });
+
+      setBookings(enrichedBookings);
+
+      // Filter user bookings
       if (currentUser) {
-        setUserBookings(convertedBookings.filter(booking => booking.userId === currentUser.id));
+        setUserBookings(enrichedBookings.filter(booking => booking.user_id === currentUser.id));
+      } else {
+        setUserBookings([]);
       }
-      
+
       // Update metrics
       setMetrics({
-        totalBookings: convertedBookings.length,
-        activeBookings: convertedBookings.filter(b => b.status === 'active').length,
-        completedBookings: convertedBookings.filter(b => b.status === 'completed').length,
-        cancelledBookings: convertedBookings.filter(b => b.status === 'cancelled').length,
+        totalBookings: enrichedBookings.length,
+        activeBookings: enrichedBookings.filter(b => b.status === 'active').length,
+        completedBookings: enrichedBookings.filter(b => b.status === 'completed').length,
+        cancelledBookings: enrichedBookings.filter(b => b.status === 'cancelled').length,
         lastRefreshTime: new Date(),
       });
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      toast.error('Failed to load data: ' + (error as Error).message);
-    }
-  }, [currentUser]);
 
-  // Initialize data
-  useEffect(() => {
-    if (currentUser) {
-      refreshData();
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser, refreshData]);
+  }, [currentUser, authLoading, enrichBooking]);
 
-  // Filter user bookings when currentUser changes
+  // Set up real-time subscriptions
   useEffect(() => {
-    if (currentUser) {
-      setUserBookings(bookings.filter(booking => booking.userId === currentUser.id));
-    } else {
-      setUserBookings([]);
-    }
-  }, [currentUser, bookings]);
+    if (authLoading) return;
+
+    // Initial data fetch
+    refreshData();
+
+    // Set up real-time subscriptions
+    const slotsChannel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'parking_slots'
+        },
+        () => refreshData()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        () => refreshData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(slotsChannel);
+    };
+  }, [refreshData, authLoading]);
 
   const addSlot = useCallback(async (name: string, type: SlotType, floor: number) => {
+    if (!currentUser?.role || currentUser.role !== 'admin') {
+      toast.error("Only admins can add parking slots");
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('parking_slots')
-        .insert({
+        .insert([{
           name,
           type,
           status: 'available',
-          floor,
-        });
+          floor
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
 
       toast.success(`Added new ${type} parking slot: ${name}`);
-      refreshData();
-    } catch (error) {
+      // Data will be updated via real-time subscription
+    } catch (error: any) {
       console.error('Error adding slot:', error);
-      toast.error('Failed to add slot: ' + (error as Error).message);
+      toast.error('Failed to add slot: ' + error.message);
     }
-  }, [refreshData]);
+  }, [currentUser]);
 
   const updateSlot = useCallback(async (id: string, updates: Partial<ParkingSlot>) => {
+    if (!currentUser?.role || currentUser.role !== 'admin') {
+      toast.error("Only admins can update parking slots");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('parking_slots')
-        .update({
-          name: updates.name,
-          type: updates.type,
-          status: updates.status,
-          floor: updates.floor,
-        })
+        .update(updates)
         .eq('id', id);
 
       if (error) throw error;
 
       toast.success(`Updated slot ${updates.name || id}`);
-      refreshData();
-    } catch (error) {
+      // Data will be updated via real-time subscription
+    } catch (error: any) {
       console.error('Error updating slot:', error);
-      toast.error('Failed to update slot: ' + (error as Error).message);
+      toast.error('Failed to update slot: ' + error.message);
     }
-  }, [refreshData]);
+  }, [currentUser]);
 
   const deleteSlot = useCallback(async (id: string) => {
+    if (!currentUser?.role || currentUser.role !== 'admin') {
+      toast.error("Only admins can delete parking slots");
+      return;
+    }
+
     const slotToDelete = slots.find(slot => slot.id === id);
     if (!slotToDelete) return;
     
     // Check if there are active bookings for this slot
     const activeBookings = bookings.filter(
-      booking => booking.slotId === id && booking.status === 'active'
+      booking => booking.slot_id === id && booking.status === 'active'
     );
     
     if (activeBookings.length > 0) {
@@ -282,14 +238,14 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       toast.success(`Deleted slot ${slotToDelete.name}`);
-      refreshData();
-    } catch (error) {
+      // Data will be updated via real-time subscription
+    } catch (error: any) {
       console.error('Error deleting slot:', error);
-      toast.error('Failed to delete slot: ' + (error as Error).message);
+      toast.error('Failed to delete slot: ' + error.message);
     }
-  }, [slots, bookings, refreshData]);
+  }, [slots, bookings, currentUser]);
 
-  const bookSlot = useCallback(async (slotId: string, startTime: Date, endTime: Date): Promise<Booking | undefined> => {
+  const bookSlot = useCallback(async (slotId: string, startTime: Date, endTime: Date): Promise<BookingWithDetails | undefined> => {
     if (!currentUser) {
       toast.error("You must be logged in to book a slot");
       return;
@@ -301,79 +257,58 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    if (slot.status === 'occupied') {
-      toast.error("This slot is already occupied");
-      return;
-    }
-    
     // Check for time conflicts
-    const { data: conflictingBookings, error: conflictError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('slot_id', slotId)
-      .eq('status', 'active')
-      .or(`and(start_time.lte.${startTime.toISOString()},end_time.gt.${startTime.toISOString()}),and(start_time.lt.${endTime.toISOString()},end_time.gte.${endTime.toISOString()}),and(start_time.gte.${startTime.toISOString()},end_time.lte.${endTime.toISOString()})`);
+    const hasConflict = bookings.some(booking => {
+      if (booking.slot_id !== slotId) return false;
+      if (booking.status !== 'active') return false;
+      
+      const bookingStart = new Date(booking.start_time);
+      const bookingEnd = new Date(booking.end_time);
+      
+      return (
+        (startTime >= bookingStart && startTime < bookingEnd) ||
+        (endTime > bookingStart && endTime <= bookingEnd) ||
+        (startTime <= bookingStart && endTime >= bookingEnd)
+      );
+    });
     
-    if (conflictError) {
-      console.error('Error checking conflicts:', conflictError);
-      toast.error('Error checking slot availability');
-      return;
-    }
-    
-    if (conflictingBookings && conflictingBookings.length > 0) {
+    if (hasConflict) {
       toast.error("This slot is already booked for the selected time");
       return;
     }
 
     try {
-      // Create booking
-      const { data: bookingData, error: bookingError } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
-        .insert({
+        .insert([{
           user_id: currentUser.id,
           slot_id: slotId,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           status: 'active'
-        })
+        }])
         .select()
         .single();
 
-      if (bookingError) throw bookingError;
+      if (error) throw error;
 
       // Update slot status to occupied
-      const { error: updateError } = await supabase
+      await supabase
         .from('parking_slots')
         .update({ status: 'occupied' })
         .eq('id', slotId);
 
-      if (updateError) {
-        console.error('Error updating slot status:', updateError);
-      }
-
-      const newBooking: Booking = {
-        id: bookingData.id,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        slotId,
-        slotName: slot.name,
-        slotType: slot.type,
-        startTime,
-        endTime,
-        createdAt: new Date(bookingData.created_at),
-        status: 'active',
-      };
-
+      const enrichedBooking = enrichBooking(data as Booking, slot, { name: currentUser.name });
+      
       toast.success(`Successfully booked slot ${slot.name}`);
-      refreshData();
-
-      return newBooking;
-    } catch (error) {
+      // Data will be updated via real-time subscription
+      
+      return enrichedBooking;
+    } catch (error: any) {
       console.error('Error booking slot:', error);
-      toast.error('Failed to book slot: ' + (error as Error).message);
-      return undefined;
+      toast.error('Failed to book slot: ' + error.message);
     }
-  }, [currentUser, slots, refreshData]);
+  }, [currentUser, slots, bookings, enrichBooking]);
 
   const cancelBooking = useCallback(async (bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
@@ -387,32 +322,32 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (booking.user_id !== currentUser?.id && currentUser?.role !== 'admin') {
+      toast.error("You can only cancel your own bookings");
+      return;
+    }
+
     try {
-      // Update booking status
-      const { error: bookingError } = await supabase
+      const { error } = await supabase
         .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId);
 
-      if (bookingError) throw bookingError;
+      if (error) throw error;
 
       // Update slot status back to available
-      const { error: slotError } = await supabase
+      await supabase
         .from('parking_slots')
         .update({ status: 'available' })
-        .eq('id', booking.slotId);
-
-      if (slotError) {
-        console.error('Error updating slot status:', slotError);
-      }
+        .eq('id', booking.slot_id);
 
       toast.success("Booking cancelled successfully");
-      refreshData();
-    } catch (error) {
+      // Data will be updated via real-time subscription
+    } catch (error: any) {
       console.error('Error cancelling booking:', error);
-      toast.error('Failed to cancel booking: ' + (error as Error).message);
+      toast.error('Failed to cancel booking: ' + error.message);
     }
-  }, [bookings, refreshData]);
+  }, [bookings, currentUser]);
 
   const getSlotById = useCallback((slotId: string) => {
     return slots.find(slot => slot.id === slotId);
@@ -420,27 +355,22 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
 
   const getAvailableSlots = useCallback((date: Date) => {
     return slots.filter(slot => {
-      // If slot is occupied, check if there's a booking that overlaps with the requested date
-      if (slot.status === 'occupied') {
-        const slotBookings = bookings.filter(
-          b => b.slotId === slot.id && b.status === 'active'
-        );
-        
-        // If there are no active bookings, the slot should be available
-        if (slotBookings.length === 0) return true;
-        
-        // Check if any booking overlaps with the requested date
-        return !slotBookings.some(booking => {
-          const bookingStart = new Date(booking.startTime);
-          const bookingEnd = new Date(booking.endTime);
-          
-          // The simple case: if the requested date falls within the booking time
-          return date >= bookingStart && date <= bookingEnd;
-        });
-      }
+      // Check if there's an active booking that overlaps with the requested date
+      const slotBookings = bookings.filter(
+        b => b.slot_id === slot.id && b.status === 'active'
+      );
       
-      // If slot is available, it's available
-      return true;
+      // If there are no active bookings, the slot is available
+      if (slotBookings.length === 0) return true;
+      
+      // Check if any booking overlaps with the requested date
+      return !slotBookings.some(booking => {
+        const bookingStart = new Date(booking.start_time);
+        const bookingEnd = new Date(booking.end_time);
+        
+        // The simple case: if the requested date falls within the booking time
+        return date >= bookingStart && date <= bookingEnd;
+      });
     });
   }, [slots, bookings]);
 
@@ -456,7 +386,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     getSlotById,
     getAvailableSlots,
     refreshData,
-    isOnline,
+    loading,
     metrics,
   };
 

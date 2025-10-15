@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useParkingContext } from '@/contexts/ParkingContext';
-import { useFeedbackContext } from '@/contexts/FeedbackContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Car, Zap, User, Clock, Activity, WifiOff, MessageSquare } from 'lucide-react';
@@ -31,9 +30,15 @@ import {
 
 export default function AdminDashboard() {
   const { currentUser, isAdmin } = useAuth();
-  const { slots, bookings, refreshData, isOnline, metrics } = useParkingContext();
-  const { feedbacks } = useFeedbackContext();
+  const { slots, bookings, refreshData, loading, metrics } = useParkingContext();
   const navigate = useNavigate();
+  
+  // Sample feedback data - in a real app this would come from your database
+  const [userFeedback, setUserFeedback] = React.useState([
+    { id: '1', userName: 'John Doe', rating: 5, comment: 'Great experience! Very easy to use.', date: '2025-05-22' },
+    { id: '2', userName: 'Jane Smith', rating: 4, comment: 'The app works well but could be faster.', date: '2025-05-22' },
+    { id: '3', userName: 'Alex Johnson', rating: 3, comment: 'Sometimes had issues with the QR code scanner.', date: '2025-05-21' }
+  ]);
   
   // Setup periodic refresh for real-time updates with same interval as user dashboard
   useEffect(() => {
@@ -117,14 +122,12 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Offline Alert */}
-        {!isOnline && (
-          <Alert variant="destructive">
-            <WifiOff className="h-4 w-4 mr-2" />
-            <AlertTitle>System is offline</AlertTitle>
+        {/* Loading indicator */}
+        {loading && (
+          <Alert>
+            <AlertTitle>Loading system data...</AlertTitle>
             <AlertDescription>
-              The parking management system is currently operating in offline mode. 
-              Some features may be limited until connectivity is restored.
+              Fetching latest parking and booking information...
             </AlertDescription>
           </Alert>
         )}
@@ -274,11 +277,12 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {feedbacks.length > 0 ? (
-                  feedbacks.slice(0, 10).map((feedback) => (
+                {userFeedback.length > 0 ? (
+                  userFeedback.map((feedback) => (
                     <TableRow key={feedback.id}>
                       <TableCell className="font-medium">{feedback.userName}</TableCell>
                       <TableCell>
+                        {/* Simple star display */}
                         <div className="flex items-center">
                           <span className="mr-2">{feedback.rating}/5</span>
                           <div className="text-yellow-400">
@@ -287,8 +291,8 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{feedback.comment || '-'}</TableCell>
-                      <TableCell>{feedback.createdAt.toLocaleDateString()}</TableCell>
+                      <TableCell>{feedback.comment}</TableCell>
+                      <TableCell>{feedback.date}</TableCell>
                     </TableRow>
                   ))
                 ) : (

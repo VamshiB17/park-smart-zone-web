@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -53,13 +53,6 @@ export type Database = {
             referencedRelation: "parking_slots"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_bookings_user_profiles"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       feedback: {
@@ -93,20 +86,6 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_feedback_bookings"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_feedback_user_profiles"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -148,7 +127,6 @@ export type Database = {
           id: string
           is_admin: boolean
           name: string | null
-          role: string
           updated_at: string
         }
         Insert: {
@@ -157,7 +135,6 @@ export type Database = {
           id: string
           is_admin?: boolean
           name?: string | null
-          role?: string
           updated_at?: string
         }
         Update: {
@@ -166,7 +143,6 @@ export type Database = {
           id?: string
           is_admin?: boolean
           name?: string | null
-          role?: string
           updated_at?: string
         }
         Relationships: []
@@ -176,10 +152,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
