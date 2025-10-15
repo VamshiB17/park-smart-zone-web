@@ -39,58 +39,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const fetchUserProfile = async (userId: string, session: Session): Promise<User> => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Profile fetch error:', error);
-        // Return fallback user on error
-        return {
-          id: userId,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || 'User',
-          role: 'user'
-        };
-      }
-      
-      if (profile) {
-        console.log('Profile found:', profile);
-        const user: User = {
-          id: profile.id,
-          email: profile.email || session.user.email || '',
-          name: profile.name || 'User',
-          role: (profile.role || (profile.is_admin ? 'admin' : 'user')) as UserRole
-        };
-        console.log('Returning user object:', user);
-        return user;
-      } else {
-        console.log('No profile found for user:', userId);
-        // Create a basic user object from session data
-        const user: User = {
-          id: userId,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || 'User',
-          role: 'user'
-        };
-        console.log('Returning fallback user object:', user);
-        return user;
-      }
-    } catch (error) {
-      console.error('Profile fetch error:', error);
-      // Return a fallback user instead of null to prevent getting stuck
-      return {
-        id: userId,
-        email: session.user.email || '',
-        name: session.user.user_metadata?.name || 'User',
-        role: 'user'
-      };
-    }
+    console.log('Fetching profile for user:', userId);
+    
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    console.log('Profile fetch result:', { profile, error });
+    
+    const user: User = {
+      id: userId,
+      email: profile?.email || session.user.email || '',
+      name: profile?.name || session.user.user_metadata?.name || 'User',
+      role: (profile?.role || (profile?.is_admin ? 'admin' : 'user')) as UserRole
+    };
+    
+    console.log('Returning user object:', user);
+    return user;
   };
 
   useEffect(() => {
