@@ -7,8 +7,22 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
-  const { currentUser } = useAuth();
+  const { currentUser, login } = useAuth();
   const navigate = useNavigate();
+  
+  // Auto-login with demo user account
+  useEffect(() => {
+    const autoLogin = async () => {
+      if (!currentUser) {
+        try {
+          await login('user@example.com', 'password123');
+        } catch (error) {
+          console.error('Auto-login failed:', error);
+        }
+      }
+    };
+    autoLogin();
+  }, []);
   
   // Redirect if already logged in
   useEffect(() => {
