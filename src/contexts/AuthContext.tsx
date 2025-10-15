@@ -110,21 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('Setting current user:', user);
             setCurrentUser(user);
             setIsAdmin(user.role === 'admin');
-
-            // Handle role-based redirection immediately after successful login
-            if (event === 'SIGNED_IN' && window.location.pathname === '/auth') {
-              console.log('Redirecting user after login:', user.role);
-              // Use setTimeout to ensure state updates are complete
-              setTimeout(() => {
-                if (user.role === 'admin') {
-                  console.log('Redirecting to admin dashboard');
-                  window.location.href = '/admin/dashboard';
-                } else {
-                  console.log('Redirecting to user dashboard');
-                  window.location.href = '/dashboard';
-                }
-              }, 100);
-            }
           }
         } else {
           if (isMounted) {
