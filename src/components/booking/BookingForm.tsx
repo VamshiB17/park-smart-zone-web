@@ -349,8 +349,7 @@ export function BookingForm({ onSuccess, preselectedSlotId }: BookingFormProps) 
                       <FormLabel>Select Parking Slot</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={!watchDate || !watchStartHour || !watchEndHour}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
