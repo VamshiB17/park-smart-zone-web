@@ -108,10 +108,19 @@ export function BookingForm({ onSuccess, preselectedSlotId }: BookingFormProps) 
   const watchEndHour = form.watch('endHour');
   
   // Generate time options (24-hour format)
-  const timeOptions = Array.from({ length: 24 }, (_, i) => {
+  const allTimeOptions = Array.from({ length: 24 }, (_, i) => {
     const hour = i.toString().padStart(2, '0');
     return { value: hour, label: `${hour}:00` };
   });
+  
+  // Filter start time options based on selected date
+  const isToday = watchDate && 
+    new Date(watchDate).toDateString() === new Date().toDateString();
+  const currentHour = new Date().getHours();
+  
+  const startTimeOptions = isToday 
+    ? allTimeOptions.filter(option => parseInt(option.value, 10) >= currentHour)
+    : allTimeOptions;
   
   // Filter slots based on selected type and availability
   const availableSlots = slots.filter(slot => {
@@ -294,7 +303,7 @@ export function BookingForm({ onSuccess, preselectedSlotId }: BookingFormProps) 
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {timeOptions.map((option) => (
+                            {startTimeOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
@@ -322,7 +331,7 @@ export function BookingForm({ onSuccess, preselectedSlotId }: BookingFormProps) 
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {timeOptions
+                            {allTimeOptions
                               .filter(option => {
                                 // Filter out times before the start time
                                 if (!watchStartHour) return true;
