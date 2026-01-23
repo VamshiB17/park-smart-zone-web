@@ -15,12 +15,18 @@ export default function Slots() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'list' | 'book'>('list');
   const [filterType, setFilterType] = useState<'all' | 'normal' | 'electric'>('all');
+  const [preselectedSlotId, setPreselectedSlotId] = useState<string | undefined>();
   
   // Redirect if not logged in
   if (!currentUser) {
     navigate('/auth');
     return null;
   }
+  
+  const handleSlotClick = (slotId: string) => {
+    setPreselectedSlotId(slotId);
+    setActiveTab('book');
+  };
   
   return (
     <PageLayout>
@@ -68,7 +74,7 @@ export default function Slots() {
               <SlotGrid 
                 slots={slots} 
                 filterType={filterType}
-                onSlotClick={() => setActiveTab('book')}
+                onSlotClick={handleSlotClick}
               />
             </div>
           </TabsContent>
@@ -76,6 +82,7 @@ export default function Slots() {
           <TabsContent value="book" className="mt-6">
             <div className="max-w-2xl mx-auto">
               <BookingForm 
+                preselectedSlotId={preselectedSlotId}
                 onSuccess={() => navigate('/bookings')}
               />
             </div>

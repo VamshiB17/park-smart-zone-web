@@ -44,9 +44,10 @@ const formSchema = z.object({
 
 interface BookingFormProps {
   onSuccess?: () => void;
+  preselectedSlotId?: string;
 }
 
-export function BookingForm({ onSuccess }: BookingFormProps) {
+export function BookingForm({ onSuccess, preselectedSlotId }: BookingFormProps) {
   const { slots, bookSlot } = useParkingContext();
   const [selectedSlotType, setSelectedSlotType] = useState<'all' | 'normal' | 'electric'>('all');
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -61,9 +62,21 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
     defaultValues: {
       startHour: '',
       endHour: '',
-      slotId: '',
+      slotId: preselectedSlotId || '',
     },
   });
+  
+  // Update slot selection when preselectedSlotId changes
+  useEffect(() => {
+    if (preselectedSlotId) {
+      form.setValue('slotId', preselectedSlotId);
+      // Set the slot type filter to match the preselected slot
+      const slot = slots.find(s => s.id === preselectedSlotId);
+      if (slot) {
+        setSelectedSlotType(slot.type);
+      }
+    }
+  }, [preselectedSlotId, form, slots]);
   
   // Monitor online/offline status
   useEffect(() => {
