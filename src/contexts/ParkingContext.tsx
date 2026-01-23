@@ -19,6 +19,7 @@ interface ParkingContextType {
   deleteSlot: (id: string) => void;
   bookSlot: (slotId: string, startTime: Date, endTime: Date) => Promise<Booking | undefined>;
   cancelBooking: (bookingId: string) => void;
+  extendBooking: (bookingId: string, newEndTime: Date) => Promise<boolean>;
   getSlotById: (slotId: string) => ParkingSlot | undefined;
   getAvailableSlots: (date: Date) => ParkingSlot[];
   refreshData: () => void;
@@ -372,6 +373,56 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [bookings, refreshData, ws]);
 
+  const extendBooking = useCallback(async (bookingId: string, newEndTime: Date): Promise<boolean> => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      toast.error("Booking not found");
+      return false;
+    }
+    
+    if (booking.status !== 'active') {
+      toast.error("Only active bookings can be extended");
+      return false;
+    }
+
+    const currentEndTime = new Date(booking.endTime);
+    if (newEndTime <= currentEndTime) {
+      toast.error("New end time must be after current end time");
+      return false;
+    }
+
+    // Check for conflicts with other bookings on the same slot
+    const hasConflict = bookings.some(b => {
+      if (b.id === bookingId) return false; // Skip the current booking
+      if (b.slotId !== booking.slotId) return false;
+      if (b.status !== 'active') return false;
+      
+      const otherStart = new Date(b.startTime);
+      const otherEnd = new Date(b.endTime);
+      
+      // Check if extended time overlaps with other booking
+      return (currentEndTime < otherEnd && newEndTime > otherStart);
+    });
+
+    if (hasConflict) {
+      toast.error("Cannot extend - conflicts with another booking");
+      return false;
+    }
+
+    // Update the booking
+    sharedDatabase.bookings = sharedDatabase.bookings.map(b => 
+      b.id === bookingId ? { ...b, endTime: newEndTime } : b
+    );
+
+    refreshData();
+    toast.success("Booking extended successfully");
+    
+    // Notify via WebSocket
+    ws?.send(JSON.stringify({ action: 'booking_extended', bookingId, newEndTime }));
+    
+    return true;
+  }, [bookings, refreshData, ws]);
+
   const getSlotById = useCallback((slotId: string) => {
     return slots.find(slot => slot.id === slotId);
   }, [slots]);
@@ -411,6 +462,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
     deleteSlot,
     bookSlot,
     cancelBooking,
+    extendBooking,
     getSlotById,
     getAvailableSlots,
     refreshData,

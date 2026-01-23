@@ -235,6 +235,10 @@ export function Navbar() {
                     
                     {!isAdmin && (
                       <>
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <User className="h-4 w-4 mr-2" />
+                          My Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                           Dashboard
                         </DropdownMenuItem>
