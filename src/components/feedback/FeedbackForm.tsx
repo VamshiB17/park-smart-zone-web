@@ -1,16 +1,17 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const feedbackSchema = z.object({
   rating: z.enum(['1', '2', '3', '4', '5'], {
@@ -25,6 +26,9 @@ type FeedbackFormProps = {
 };
 
 export function FeedbackForm({ onComplete }: FeedbackFormProps) {
+  const { currentUser } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
@@ -34,13 +38,34 @@ export function FeedbackForm({ onComplete }: FeedbackFormProps) {
     },
   });
 
-  function onSubmit(data: z.infer<typeof feedbackSchema>) {
-    // In a real app, this would send the feedback to a server
-    console.log('Feedback submitted:', data);
-    toast.success('Thank you for your feedback!');
+  async function onSubmit(data: z.infer<typeof feedbackSchema>) {
+    if (!currentUser) {
+      toast.error('You must be logged in to submit feedback');
+      return;
+    }
     
-    if (onComplete) {
-      onComplete();
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('feedback').insert({
+        user_id: currentUser.id,
+        rating: parseInt(data.rating),
+        experience: data.experience,
+        suggestions: data.suggestions || null,
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Thank you for your feedback!');
+      form.reset();
+      
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error('Failed to submit feedback. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -116,7 +141,10 @@ export function FeedbackForm({ onComplete }: FeedbackFormProps) {
               )}
             />
             
-            <Button type="submit" className="w-full">Submit Feedback</Button>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Submit Feedback
+            </Button>
           </form>
         </Form>
       </CardContent>
