@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   signup: (email: string, password: string, name: string) => Promise<User>;
   isAdmin: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -32,42 +33,70 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setTimeout(() => {
-          fetchUserProfile(session.user);
-        }, 0);
-      } else {
-        setCurrentUser(null);
-        setIsAdmin(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          // Use setTimeout to prevent potential deadlock with Supabase client
+          setTimeout(() => {
+            fetchUserProfile(session.user);
+          }, 0);
+        } else {
+          setCurrentUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+        }
       }
-    });
+    );
 
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchUserProfile(session.user);
+      } else {
+        setLoading(false);
       }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (user: SupabaseUser) => {
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    try {
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    const userData: User = {
-      id: user.id,
-      email: user.email || '',
-      name: profile?.name || 'User',
-      role: profile?.is_admin ? 'admin' : 'user',
-    };
+      // Fetch admin role
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
 
-    setCurrentUser(userData);
-    setIsAdmin(userData.role === 'admin');
+      const userData: User = {
+        id: user.id,
+        email: user.email || '',
+        name: profile?.name || user.user_metadata?.name || 'User',
+        role: adminRole ? 'admin' : 'user',
+      };
+
+      setCurrentUser(userData);
+      setIsAdmin(userData.role === 'admin');
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const login = async (email: string, password: string): Promise<User> => {
@@ -79,17 +108,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
     if (!data.user) throw new Error('Login failed');
 
+    // Fetch profile
     const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
+      .from('profiles')
+      .select('name')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
+
+    // Fetch admin role
+    const { data: adminRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
 
     const user: User = {
       id: data.user.id,
       email: data.user.email || '',
-      name: profile?.name || 'User',
-      role: profile?.is_admin ? 'admin' : 'user',
+      name: profile?.name || data.user.user_metadata?.name || 'User',
+      role: adminRole ? 'admin' : 'user',
     };
 
     setCurrentUser(user);
@@ -138,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     signup,
     isAdmin,
+    loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
