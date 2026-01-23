@@ -18,6 +18,7 @@ import AdminFeedback from "./pages/AdminFeedback";
 import AdminUsers from "./pages/AdminUsers";
 import Help from "./pages/Help";
 import QRScannerPage from "./pages/QRScanner";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 // Contexts
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/qr-scanner" element={<QRScannerPage />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/slots" element={<AdminSlots />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />

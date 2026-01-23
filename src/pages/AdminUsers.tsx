@@ -4,7 +4,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, ArrowLeft, RefreshCw, Shield, User } from 'lucide-react';
+import { Users, ArrowLeft, RefreshCw, Shield, User, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Table, 
@@ -17,10 +17,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 interface UserProfile {
   id: string;
   name: string;
+  email: string;
   created_at: string;
   updated_at: string;
   roles: string[];
@@ -48,32 +50,65 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Get the current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (profilesError) throw profilesError;
-      
-      // Fetch roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-      
-      if (rolesError) throw rolesError;
-      
-      // Combine data
-      const usersWithRoles = (profiles || []).map(profile => ({
-        ...profile,
-        roles: (roles || [])
-          .filter(r => r.user_id === profile.id)
-          .map(r => r.role)
-      }));
-      
-      setUsers(usersWithRoles);
+      if (!session) {
+        toast.error('Session expired');
+        navigate('/auth');
+        return;
+      }
+
+      // Call the edge function to get users with emails
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-users-with-emails`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch users');
+      }
+
+      const { users: fetchedUsers } = await response.json();
+      setUsers(fetchedUsers || []);
     } catch (error) {
       console.error('Error fetching users:', error);
+      toast.error('Failed to fetch users');
+      
+      // Fallback to basic profile fetch without emails
+      try {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (profilesError) throw profilesError;
+        
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        if (rolesError) throw rolesError;
+        
+        const usersWithRoles = (profiles || []).map(profile => ({
+          ...profile,
+          email: 'N/A',
+          roles: (roles || [])
+            .filter(r => r.user_id === profile.id)
+            .map(r => r.role)
+        }));
+        
+        setUsers(usersWithRoles);
+      } catch (fallbackError) {
+        console.error('Fallback fetch also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
@@ -154,6 +189,7 @@ export default function AdminUsers() {
                 {[1, 2, 3].map(i => (
                   <div key={i} className="flex gap-4">
                     <Skeleton className="h-12 w-48" />
+                    <Skeleton className="h-12 w-48" />
                     <Skeleton className="h-12 w-24" />
                     <Skeleton className="h-12 flex-1" />
                   </div>
@@ -164,6 +200,12 @@ export default function AdminUsers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </div>
+                    </TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Last Updated</TableHead>
@@ -174,9 +216,10 @@ export default function AdminUsers() {
                     users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
                         <TableCell>
                           {user.roles.includes('admin') ? (
-                            <Badge className="bg-purple-100 text-purple-800">
+                            <Badge className="bg-primary/20 text-primary">
                               <Shield className="h-3 w-3 mr-1" />
                               Admin
                             </Badge>
@@ -197,7 +240,7 @@ export default function AdminUsers() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         No users found
                       </TableCell>
                     </TableRow>
