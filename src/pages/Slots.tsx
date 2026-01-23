@@ -35,7 +35,7 @@ export default function Slots() {
           <h1 className="text-3xl font-bold">Parking Slots</h1>
         </div>
         
-        <Tabs defaultValue="list" onValueChange={(value) => setActiveTab(value as any)}>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'list' | 'book')}>
           <div className="flex justify-between items-center">
             <TabsList>
               <TabsTrigger value="list">View Slots</TabsTrigger>
