@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Booking } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Car, Zap, QrCode, Clock } from 'lucide-react';
+import { Car, Zap, QrCode, Clock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -13,6 +13,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -295,13 +306,37 @@ export function BookingList({ bookings, onCancel, isAdmin = false }: BookingList
               )}
               
               {booking.status === 'active' && onCancel && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onCancel(booking.id)}
-                >
-                  Cancel Booking
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Cancel Booking
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Cancel Booking?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to cancel your booking for <strong>Slot {booking.slotName}</strong> on{' '}
+                        <strong>{formatDate(booking.startTime)}</strong> from{' '}
+                        <strong>{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</strong>?
+                        <br /><br />
+                        This action cannot be undone. The slot will be released and made available for others to book.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onCancel(booking.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Yes, Cancel Booking
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </div>
