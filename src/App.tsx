@@ -14,6 +14,8 @@ import Bookings from "./pages/Bookings";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSlots from "./pages/AdminSlots";
 import AdminBookings from "./pages/AdminBookings";
+import AdminFeedback from "./pages/AdminFeedback";
+import AdminUsers from "./pages/AdminUsers";
 import Help from "./pages/Help";
 import QRScannerPage from "./pages/QRScanner";
 import NotFound from "./pages/NotFound";
@@ -43,6 +45,8 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/slots" element={<AdminSlots />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/feedback" element={<AdminFeedback />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
